@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.env
+.env.local
+*.zip
+
+# Terraform
+infra/.terraform/
+infra/.placeholder/
+infra/*.tfstate
+infra/*.tfstate.backup
+infra/.terraform.lock.hcl
+infra/terraform.tfvars
+
+# Build outputs
+backend/dist/
+cognito-trigger/dist/
+frontend/dist/
+packages/shared/dist/

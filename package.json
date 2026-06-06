@@ -1,0 +1,16 @@
+{
+  "name": "omome",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "backend",
+    "frontend",
+    "cognito-trigger"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @omome/shared",
+    "dev:shared": "npm run dev -w @omome/shared",
+    "build:backend": "npm run build:shared && npm run build -w backend",
+    "dev:backend": "npm run dev -w @omome/shared & npm run dev -w backend"
+  }
+}
