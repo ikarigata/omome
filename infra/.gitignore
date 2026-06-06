@@ -1,0 +1,16 @@
+# Terraform ワーキングディレクトリ（プロバイダバイナリ等）
+.terraform/
+
+# State ファイル（S3 バックエンドを使う場合はローカルには残らない）
+*.tfstate
+*.tfstate.backup
+
+# 環境ごとの変数ファイル（シークレットを含む）
+*.tfvars
+*.tfvars.json
+
+# Lambda プレースホルダー zip（terraform apply 時に自動生成される）
+.placeholder/
+
+# バックエンド設定ファイル（neon_api_key 等を含む可能性がある）
+backend.hcl
