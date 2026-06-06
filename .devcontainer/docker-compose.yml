@@ -1,0 +1,35 @@
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:4-24-trixie
+    command: sleep infinity
+    volumes:
+      - ..:/workspaces/omome:cached
+    environment:
+      # ローカル開発用の DB 接続。Neon と違いローカルには pooler が無いため、
+      # DATABASE_URL（本番は pooled）/ DIRECT_URL（migration 用）とも
+      # 同一の direct 接続（db:5432）を指す。本番値は Secrets/環境変数で別途上書きする。
+      DATABASE_URL: postgres://omome:omome@db:5432/omome
+      DIRECT_URL: postgres://omome:omome@db:5432/omome
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: omome
+      POSTGRES_PASSWORD: omome
+      POSTGRES_DB: omome
+    volumes:
+      - omome-db-data:/var/lib/postgresql/data
+    ports:
+      - "5437:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omome -d omome"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  omome-db-data:

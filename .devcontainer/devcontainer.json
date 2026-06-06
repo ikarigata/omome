@@ -2,23 +2,36 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/typescript-node
 {
 	"name": "Node.js & TypeScript",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/typescript-node:4-24-trixie",
+	// アプリ用コンテナ(app)と Postgres(db) を docker-compose で起動する。
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "app",
+	"workspaceFolder": "/workspaces/omome",
 	"features": {
 		"ghcr.io/devcontainers/features/aws-cli:1": {},
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers/features/github-cli:1": {},
-		"ghcr.io/devcontainers/features/terraform:1": {}
+		"ghcr.io/devcontainers/features/terraform:1": {},
+		"ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
 	},
-	"postCreateCommand": "npm install -g @anthropic-ai/claude-code"
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "yarn install",
-	// Configure tool-specific properties.
-	// "customizations": {},
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"esbenp.prettier-vscode",
+				"hashicorp.terraform",
+				"amazonwebservices.aws-toolkit-vscode",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	},
+	// remoteUser は image 既定の node。ホームは /home/node なので bind 先もそれに合わせる。
+	"mounts": [
+		"source=${localEnv:HOME}/.aws,target=/home/node/.aws,type=bind,consistency=cached",
+		"source=${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,consistency=cached"
+	],
+	// VS Code から DB へ直接つなぐ場合に 5432 を転送（compose 側でも publish 済み）。
+	"forwardPorts": [
+		5437
+	],
+	// psql を使えるようにする（マイグレーションは Drizzle Kit が pg ドライバで接続するため必須ではないが、確認用に入れておく）。
+	"postCreateCommand": "sudo apt-get update && sudo apt-get install -y postgresql-client"
 }
