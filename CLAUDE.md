@@ -62,3 +62,7 @@ infra/             Terraform（AWS + Neon コミュニティ Provider）。
 ## 環境
 
 devcontainer（`mcr.microsoft.com/devcontainers/typescript-node`）に AWS CLI、Terraform、GitHub CLI、Claude Code がプリインストールされている。`~/.aws` と `~/.ssh` はホストから bind マウントされる。Neon の Terraform Provider はコミュニティ製のため、version を固定し `terraform init -upgrade` は避けること（破壊的なリソース再作成 = データ損失のリスク）。
+
+Terraform および AWS CLI の実行には `AWS_PROFILE=terraform` を指定すること（`~/.aws` に設定済みのプロファイル）。このプロファイルには IAM ロール作成を含む必要な権限がある。`deploy.sh` では冒頭で `export AWS_PROFILE=terraform` を設定済み。手動で terraform コマンドを実行する場合も同様に指定すること。
+
+Neon の org_id は `org-blue-meadow-49976132`（`infra/neon.tf` の `neon_project` リソースに設定済み）。

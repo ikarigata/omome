@@ -10,7 +10,8 @@ infra/.placeholder/
 infra/*.tfstate
 infra/*.tfstate.backup
 infra/.terraform.lock.hcl
-infra/terraform.tfvars
+infra/*.tfvars
+infra/*.tfvars.json
 
 # Build outputs
 backend/dist/

@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 1. 基本パレット */
+  --color-main: 241 239 223;     /* #F1EFDF */
+  --color-sub: 38 39 42;         /* #26272A */
+  --color-accent: 232 96 41;     /* #E86029 */
+  --color-container: 59 60 63;   /* #3B3C3F */
+  --color-pure: 255 255 255;     /* #FFFFFF */
+
+  /* 2. 用途別トークン（コンポーネントはこちらのみ使う） */
+  --color-surface-primary:   var(--color-main);
+  --color-surface-secondary: var(--color-sub);
+  --color-surface-container: var(--color-container);
+  --color-surface-pure:      var(--color-pure);
+
+  --color-content-primary:   var(--color-sub);
+  --color-content-secondary: 100 101 104;
+  --color-content-accent:    var(--color-accent);
+  --color-content-inverse:   var(--color-main);
+
+  --color-interactive-primary: var(--color-accent);
+  --color-interactive-hover:   200 74 22;
+
+  --color-navigation-bg:   var(--color-accent);
+  --color-navigation-text: var(--color-pure);
+
+  --color-input-bg:          var(--color-container);
+  --color-input-text:        var(--color-pure);
+  --color-input-placeholder: 140 141 144;
+
+  --color-border-default: 80 81 84;
+
+  --color-danger: 220 38 38;
+}
+
+/* テーマ拡張: [data-theme="..."] セレクタで用途別トークンを上書きするだけでよい構造 */
+
+@layer base {
+  html, body {
+    @apply font-gothic bg-surface-primary text-content-primary;
+    min-height: 100dvh;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}

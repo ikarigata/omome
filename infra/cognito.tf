@@ -28,10 +28,9 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
-  # Post Confirmation トリガー（users 行作成）は Phase 4 で紐付ける。
-  # lambda_config {
-  #   post_confirmation = aws_lambda_function.cognito_trigger.arn
-  # }
+  lambda_config {
+    post_confirmation = aws_lambda_function.cognito_trigger.arn
+  }
 
   tags = {
     Name = "${local.name_prefix}-user-pool"

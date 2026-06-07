@@ -2,6 +2,9 @@ services:
   app:
     image: mcr.microsoft.com/devcontainers/typescript-node:4-24-trixie
     command: sleep infinity
+    # vite dev (5173) をホストに公開。ホスト側の tailscale serve がここへ転送する。
+    ports:
+      - "5173:5173"
     volumes:
       - ..:/workspaces/omome:cached
     environment:

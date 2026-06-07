@@ -1,3 +1,8 @@
+output "frontend_s3_bucket" {
+  description = "フロントエンド静的ファイルの S3 バケット名"
+  value       = aws_s3_bucket.frontend.bucket
+}
+
 output "cloudfront_domain" {
   description = "CloudFront のドメイン（アプリの公開 URL）"
   value       = "https://${aws_cloudfront_distribution.main.domain_name}"

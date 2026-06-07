@@ -11,6 +11,8 @@
     "build:shared": "npm run build -w @omome/shared",
     "dev:shared": "npm run dev -w @omome/shared",
     "build:backend": "npm run build:shared && npm run build -w backend",
-    "dev:backend": "npm run dev -w @omome/shared & npm run dev -w backend"
+    "dev:backend": "npm run dev -w @omome/shared & npm run dev -w backend",
+    "build:frontend": "npm run build:shared && npm run build -w frontend",
+    "dev:frontend": "npm run dev -w @omome/shared & npm run dev -w frontend"
   }
 }

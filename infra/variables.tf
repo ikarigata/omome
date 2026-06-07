@@ -22,7 +22,13 @@ variable "neon_api_key" {
 }
 
 variable "app_domain" {
-  description = "アプリのカスタムドメイン（例: omome.example.com）。空の場合は CloudFront のデフォルトドメインを使用する。"
+  description = "カスタムドメイン（例: omome.example.com）。CloudFront エイリアスと ACM 証明書が必要な場合のみ設定する。空の場合は CloudFront のデフォルトドメインを使用する。"
+  type        = string
+  default     = ""
+}
+
+variable "cors_origin" {
+  description = "API Gateway の CORS 許可オリジン（例: https://d2dc9ic4vkktqm.cloudfront.net）。空の場合はワイルドカード（*）になる。"
   type        = string
   default     = ""
 }
