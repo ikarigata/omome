@@ -1,4 +1,5 @@
 import { and, asc, eq } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 import { db } from '../db/client.js'
 import { exercises, exerciseMuscleGroups, muscleGroups } from '../db/schema.js'
 import { isUniqueViolation } from '../middleware/error.js'
@@ -34,23 +35,24 @@ export const exercisesRepository = {
     userId: string,
     data: { id: string; name: string; description?: string; muscleGroups: MuscleGroupEntry[] },
   ) {
+    const emgRows = data.muscleGroups.map((mg) => ({
+      id: crypto.randomUUID(),
+      exerciseId: data.id,
+      muscleGroupId: mg.id,
+      isPrimary: mg.isPrimary,
+    }))
+
     try {
-      return await db.transaction(async (tx) => {
-        const [exercise] = await tx
+      // neon-http はインタラクティブな transaction 非対応。batch は単一トランザクション
+      // として原子的に実行されるので、種目行 + 中間テーブル行をまとめて挿入する。
+      const [inserted] = await db.batch([
+        db
           .insert(exercises)
           .values({ id: data.id, userId, name: data.name, description: data.description ?? null })
-          .returning()
-
-        const emgRows = data.muscleGroups.map((mg) => ({
-          id: crypto.randomUUID(),
-          exerciseId: data.id,
-          muscleGroupId: mg.id,
-          isPrimary: mg.isPrimary,
-        }))
-        await tx.insert(exerciseMuscleGroups).values(emgRows)
-
-        return exercise!
-      })
+          .returning(),
+        db.insert(exerciseMuscleGroups).values(emgRows),
+      ])
+      return inserted[0]!
     } catch (err) {
       if (isUniqueViolation(err)) return null // signal existing row
       throw err
@@ -61,27 +63,32 @@ export const exercisesRepository = {
     id: string,
     data: { name?: string; description?: string | null; muscleGroups?: MuscleGroupEntry[] },
   ) {
-    return db.transaction(async (tx) => {
-      const updateData: Record<string, unknown> = {}
-      if (data.name !== undefined) updateData.name = data.name
-      if (data.description !== undefined) updateData.description = data.description
+    // neon-http は transaction 非対応のため batch（単一トランザクション）で原子的に実行する。
+    const statements: BatchItem<'pg'>[] = []
 
-      if (Object.keys(updateData).length > 0) {
-        await tx.update(exercises).set(updateData).where(eq(exercises.id, id))
-      }
+    const updateData: Record<string, unknown> = {}
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.description !== undefined) updateData.description = data.description
 
-      if (data.muscleGroups !== undefined) {
-        // Full replacement of muscle group associations
-        await tx.delete(exerciseMuscleGroups).where(eq(exerciseMuscleGroups.exerciseId, id))
-        const emgRows = data.muscleGroups.map((mg) => ({
-          id: crypto.randomUUID(),
-          exerciseId: id,
-          muscleGroupId: mg.id,
-          isPrimary: mg.isPrimary,
-        }))
-        await tx.insert(exerciseMuscleGroups).values(emgRows)
-      }
-    })
+    if (Object.keys(updateData).length > 0) {
+      statements.push(db.update(exercises).set(updateData).where(eq(exercises.id, id)))
+    }
+
+    if (data.muscleGroups !== undefined) {
+      // Full replacement of muscle group associations（削除 + 再挿入）
+      statements.push(db.delete(exerciseMuscleGroups).where(eq(exerciseMuscleGroups.exerciseId, id)))
+      const emgRows = data.muscleGroups.map((mg) => ({
+        id: crypto.randomUUID(),
+        exerciseId: id,
+        muscleGroupId: mg.id,
+        isPrimary: mg.isPrimary,
+      }))
+      statements.push(db.insert(exerciseMuscleGroups).values(emgRows))
+    }
+
+    if (statements.length > 0) {
+      await db.batch(statements as [BatchItem<'pg'>, ...BatchItem<'pg'>[]])
+    }
   },
 
   async delete(id: string) {
