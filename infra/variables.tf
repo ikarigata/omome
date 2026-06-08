@@ -32,3 +32,9 @@ variable "cors_origin" {
   type        = string
   default     = ""
 }
+
+variable "github_repo" {
+  description = "GitHub Actions OIDC の信頼対象リポジトリ（owner/repo 形式）。CD ロールの assume をこのリポジトリの main ブランチに限定する。"
+  type        = string
+  default     = "ikarigata/omome"
+}

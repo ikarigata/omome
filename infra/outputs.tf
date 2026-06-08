@@ -38,6 +38,11 @@ output "lambda_cognito_trigger_function_name" {
   value       = aws_lambda_function.cognito_trigger.function_name
 }
 
+output "github_actions_role_arn" {
+  description = "GitHub Actions（CD）が assume する IAM ロール ARN。GitHub Secret AWS_ROLE_ARN に登録する。"
+  value       = aws_iam_role.github_actions.arn
+}
+
 output "neon_database_url" {
   description = "Neon pooled 接続文字列（Lambda 環境変数 DATABASE_URL。Drizzle Kit の direct 接続には使わない）"
   value       = local.neon_database_url

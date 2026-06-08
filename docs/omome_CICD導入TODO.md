@@ -78,14 +78,15 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 ---
 
-## フェーズC: AWS OIDC 連携（CD の前提）
+## フェーズC: AWS OIDC 連携（CD の前提）✅ Terraform 定義済み（`terraform apply` は未実行）
 
 > CD は IAM ユーザの長期キーではなく、GitHub OIDC で短命クレデンシャルを取得する。`infra/` に Terraform で定義する。
+> 定義ファイル: `infra/github_oidc.tf`（OIDC プロバイダ + ロール + 最小権限ポリシー）。対象リポジトリは `var.github_repo`（既定 `ikarigata/omome`）。
 
-- [ ] OIDC プロバイダ `token.actions.githubusercontent.com` を IAM に登録（`infra/iam.tf` 等）
-- [ ] GitHub Actions 用 IAM ロール作成。信頼ポリシーで `repo:ikarigata/omome:*`（または `ref:refs/heads/main`）に限定
-- [ ] ロールの権限: `lambda:UpdateFunctionCode` / `lambda:GetFunction`（wait 用）/ `s3:PutObject`/`DeleteObject`/`ListBucket`（対象バケット）/ `cloudfront:CreateInvalidation`。最小権限で付与
-- [ ] ロール ARN を出力（`terraform output`）し、後述の GitHub secret に登録
+- [x] OIDC プロバイダ `token.actions.githubusercontent.com` を IAM に登録（`infra/github_oidc.tf`）
+- [x] GitHub Actions 用 IAM ロール作成。信頼ポリシーで `repo:ikarigata/omome:ref:refs/heads/main` に限定
+- [x] ロールの権限: `lambda:UpdateFunctionCode` / `lambda:GetFunction`（wait 用）/ `s3:PutObject`/`DeleteObject`/`ListBucket`（対象バケット）/ `cloudfront:CreateInvalidation`。最小権限で付与
+- [x] ロール ARN を出力（`output "github_actions_role_arn"`）し、後述の GitHub secret に登録（`terraform apply` 後）
 
 ---
 
