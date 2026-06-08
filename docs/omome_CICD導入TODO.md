@@ -13,7 +13,7 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 | 項目 | chore-chore | omome | 対応 |
 |---|---|---|---|
 | shared の参照名 | `-w shared` | `@omome/shared`（パス `packages/shared`） | `npm run build:shared`（= `-w @omome/shared`）を使う |
-| テスト | `npm test -w backend` / `vitest run` | **テストは未整備（テストファイル無し）** | CI からテスト step を**外す**。代わりに typecheck を回す |
+| テスト | `npm test -w backend` / `vitest run` | **整備済み**（vitest。shared/backend/frontend/cognito-trigger = 115 tests） | `lint-and-typecheck` job に `npm test`（ルート集約スクリプト）を追加済み |
 | Lambda 関数 | 1つ（app のみ） | **2つ**（backend app + cognito-trigger） | CD で両方の `update-function-code` を実行 |
 | frontend env | `VITE_*` 3種（`VITE_API_ENDPOINT` 含む） | `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` の**2種のみ**（API はCloudFront同一オリジン） | `VITE_API_ENDPOINT` は使わない |
 | Terraform state | （要確認） | **ローカル state を repo にコミット**（`infra/terraform.tfstate`） | CD で `terraform apply` は**走らせない**（ephemeral runner からローカル state を更新できない／Neon 再作成リスク）。インフラ変更は手動 `deploy.sh` を維持 |
@@ -34,26 +34,27 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 > トリガー: `pull_request` branches: [main]。AWS シークレット不要。
 
-- [ ] `.github/workflows/` ディレクトリ作成
-- [ ] job: **lint-and-typecheck**
-  - [ ] `actions/checkout@v4`
-  - [ ] `actions/setup-node@v4`（`node-version: '22'`, `cache: 'npm'`）
-  - [ ] `npm ci`
-  - [ ] `npm run build:shared`（shared を最初にビルド。後続 typecheck/build の前提）
-  - [ ] `npm run typecheck -w backend`
-  - [ ] `npm run typecheck -w cognito-trigger`
-  - [ ] `npm run typecheck -w frontend`
-- [ ] job: **build**
-  - [ ] checkout / setup-node / `npm ci` / `npm run build:shared`
-  - [ ] `npm run build -w backend`
-  - [ ] `npm run build -w cognito-trigger`
-  - [ ] `npm run build -w frontend`（env に dummy の `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` を渡す）
-- [ ] job: **terraform**（`working-directory: infra`）
-  - [ ] `hashicorp/setup-terraform@v3`
-  - [ ] `terraform fmt -check -recursive`
-  - [ ] `terraform init -backend=false`（state に触れずプロバイダ取得のみ。`-upgrade` は付けない）
-  - [ ] `terraform validate`
-- [ ] PR を立てて 3 job が緑になることを確認
+- [x] `.github/workflows/` ディレクトリ作成
+- [x] job: **lint-and-typecheck**
+  - [x] `actions/checkout@v4`
+  - [x] `actions/setup-node@v4`（`node-version: '22'`, `cache: 'npm'`）
+  - [x] `npm ci`
+  - [x] `npm run build:shared`（shared を最初にビルド。後続 typecheck/build の前提）
+  - [x] `npm run typecheck -w backend`
+  - [x] `npm run typecheck -w cognito-trigger`
+  - [x] `npm run typecheck -w frontend`
+  - [x] `npm test`（ルート集約スクリプト。全 workspace のテストを実行）
+- [x] job: **build**
+  - [x] checkout / setup-node / `npm ci` / `npm run build:shared`
+  - [x] `npm run build -w backend`
+  - [x] `npm run build -w cognito-trigger`
+  - [x] `npm run build -w frontend`（env に dummy の `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` を渡す）
+- [x] job: **terraform**（`working-directory: infra`）
+  - [x] `hashicorp/setup-terraform@v3`
+  - [x] `terraform fmt -check -recursive`
+  - [x] `terraform init -backend=false`（state に触れずプロバイダ取得のみ。`-upgrade` は付けない）
+  - [x] `terraform validate`
+- [ ] PR を立てて 3 job が緑になることを確認（ローカルでは全 job 相当のコマンドが緑。実 CI 上の確認は PR にて）
 
 ---
 

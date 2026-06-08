@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+# 同一ブランチで新しい push があれば古い実行をキャンセル
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: lint / typecheck / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      # shared を最初にビルド（後続の typecheck / test の前提）
+      - run: npm run build:shared
+      - run: npm run typecheck -w backend
+      - run: npm run typecheck -w cognito-trigger
+      - run: npm run typecheck -w frontend
+      # 全 workspace のテスト（集約スクリプト。内部で build:shared 済み前提）
+      - run: npm test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build:shared
+      - run: npm run build -w backend
+      - run: npm run build -w cognito-trigger
+      # frontend は Cognito 2変数のみ必要。CI ではダミー値でビルドが通ることだけ確認
+      - run: npm run build -w frontend
+        env:
+          VITE_COGNITO_USER_POOL_ID: dummy-user-pool-id
+          VITE_COGNITO_CLIENT_ID: dummy-client-id
+
+  terraform:
+    name: terraform lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      # state には触れずプロバイダ取得のみ（-upgrade は付けない: Neon 再作成リスク）
+      - run: terraform init -backend=false
+      - run: terraform validate
