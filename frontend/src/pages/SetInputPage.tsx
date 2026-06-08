@@ -73,6 +73,7 @@ function SortableSetRow({
             <label className="text-xs text-content-inverse/50">レップ</label>
             <input
               type="number"
+              inputMode="numeric"
               min={0}
               value={setRow.reps}
               onChange={(e) => onUpdate(setRow.id, 'reps', Number(e.target.value))}
@@ -83,6 +84,7 @@ function SortableSetRow({
             <label className="text-xs text-content-inverse/50">追加レップ</label>
             <input
               type="number"
+              inputMode="numeric"
               min={0}
               value={setRow.subReps}
               onChange={(e) => onUpdate(setRow.id, 'subReps', Number(e.target.value))}
@@ -93,6 +95,7 @@ function SortableSetRow({
             <label className="text-xs text-content-inverse/50">重量 (kg)</label>
             <input
               type="number"
+              inputMode="decimal"
               min={0}
               step={0.5}
               value={setRow.weight}
@@ -134,7 +137,7 @@ export function SetInputPage() {
   const { data: records = [] } = useWorkoutRecordsByDay(workoutId ?? '')
   const record = records.find((r) => r.exerciseId === exerciseId)
 
-  const { data: sets = [] } = useWorkoutSets(record?.id ?? '')
+  const { data: sets } = useWorkoutSets(record?.id ?? '')
   const { data: exercise } = useExercise(exerciseId ?? '')
 
   const createSet = useCreateWorkoutSet()
@@ -144,8 +147,10 @@ export function SetInputPage() {
   const [rows, setRows] = useState<SetRow[]>([])
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
 
+  // sets はロード中 undefined（安定参照）。`= []` 既定だと毎レンダ新しい配列になり
+  // この effect が無限ループするため、依存は素の `sets` にして中で空配列にフォールバックする。
   useEffect(() => {
-    setRows(setsToRows(sets))
+    setRows(setsToRows(sets ?? []))
   }, [sets])
 
   const sensors = useSensors(
