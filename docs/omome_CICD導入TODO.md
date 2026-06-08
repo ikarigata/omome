@@ -58,23 +58,23 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 ---
 
-## フェーズB: CD ワークフロー（`.github/workflows/cd.yml`）
+## フェーズB: CD ワークフロー（`.github/workflows/cd.yml`）✅ 作成済み（実 CD 実行はフェーズC/D 完了後）
 
 > トリガー: `push` branches: [main]。`permissions: id-token: write / contents: read`（OIDC 用）。
 
-- [ ] job: **deploy**
-  - [ ] checkout / setup-node（22, cache npm）
-  - [ ] `aws-actions/configure-aws-credentials@v4`（`role-to-assume: ${{ secrets.AWS_ROLE_ARN }}`, `aws-region: ${{ vars.AWS_REGION }}`）
-  - [ ] `npm ci`
-  - [ ] `npm run build:shared`
-  - [ ] `npm run build -w backend` → `(cd backend/dist && zip -qr lambda.zip index.js)`
-  - [ ] `npm run build -w cognito-trigger` → `(cd cognito-trigger/dist && zip -qr lambda.zip index.js)`
-  - [ ] Deploy Lambda (app): `aws lambda update-function-code --function-name ${{ vars.LAMBDA_APP_FUNCTION_NAME }} --zip-file fileb://backend/dist/lambda.zip` → `aws lambda wait function-updated`
-  - [ ] Deploy Lambda (cognito-trigger): 同様に `${{ vars.LAMBDA_TRIGGER_FUNCTION_NAME }}` / `cognito-trigger/dist/lambda.zip`
-  - [ ] `npm run build -w frontend`（env: `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` を secrets から）
-  - [ ] `aws s3 sync frontend/dist/ s3://${{ vars.FRONTEND_BUCKET }} --delete`
-  - [ ] `aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"`
-- [ ] main へのマージで一連が成功することを確認
+- [x] job: **deploy**
+  - [x] checkout / setup-node（22, cache npm）
+  - [x] `aws-actions/configure-aws-credentials@v4`（`role-to-assume: ${{ secrets.AWS_ROLE_ARN }}`, `aws-region: ${{ vars.AWS_REGION }}`）
+  - [x] `npm ci`
+  - [x] `npm run build:shared`
+  - [x] `npm run build -w backend` → `(cd backend/dist && zip -qr lambda.zip index.js)`
+  - [x] `npm run build -w cognito-trigger` → `(cd cognito-trigger/dist && zip -qr lambda.zip index.js)`
+  - [x] Deploy Lambda (app): `aws lambda update-function-code --function-name ${{ vars.LAMBDA_APP_FUNCTION_NAME }} --zip-file fileb://backend/dist/lambda.zip` → `aws lambda wait function-updated`
+  - [x] Deploy Lambda (cognito-trigger): 同様に `${{ vars.LAMBDA_TRIGGER_FUNCTION_NAME }}` / `cognito-trigger/dist/lambda.zip`
+  - [x] `npm run build -w frontend`（env: `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` を secrets から）
+  - [x] `aws s3 sync frontend/dist/ s3://${{ vars.FRONTEND_BUCKET }} --delete`
+  - [x] `aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"`
+- [ ] main へのマージで一連が成功することを確認（OIDC ロール=フェーズC / Secrets・Variables=フェーズD の登録後）
 
 ---
 

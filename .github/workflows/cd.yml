@@ -1,0 +1,81 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+# OIDC で短命クレデンシャルを取得（長期キーは置かない）
+permissions:
+  id-token: write
+  contents: read
+
+# 同時デプロイを避ける（古い実行はキャンセルしない＝中断による中途半端なデプロイを防ぐ）
+concurrency:
+  group: cd-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy app & assets
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # OIDC で AWS ロールを assume
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - run: npm ci
+      # shared を最初にビルド（後続ビルドの前提）
+      - run: npm run build:shared
+
+      # ─── Lambda バンドル & zip ───────────────────────────────
+      - name: Build & package backend (app)
+        run: |
+          npm run build -w backend
+          (cd backend/dist && zip -qr lambda.zip index.js)
+      - name: Build & package cognito-trigger
+        run: |
+          npm run build -w cognito-trigger
+          (cd cognito-trigger/dist && zip -qr lambda.zip index.js)
+
+      # ─── Lambda コード更新（app / cognito-trigger の2関数）───
+      - name: Deploy Lambda (app)
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ vars.LAMBDA_APP_FUNCTION_NAME }}" \
+            --zip-file fileb://backend/dist/lambda.zip \
+            --output text --query 'FunctionName'
+          aws lambda wait function-updated \
+            --function-name "${{ vars.LAMBDA_APP_FUNCTION_NAME }}"
+      - name: Deploy Lambda (cognito-trigger)
+        run: |
+          aws lambda update-function-code \
+            --function-name "${{ vars.LAMBDA_TRIGGER_FUNCTION_NAME }}" \
+            --zip-file fileb://cognito-trigger/dist/lambda.zip \
+            --output text --query 'FunctionName'
+          aws lambda wait function-updated \
+            --function-name "${{ vars.LAMBDA_TRIGGER_FUNCTION_NAME }}"
+
+      # ─── フロントエンド（Cognito 2変数のみ。API は同一オリジン）─
+      - name: Build frontend
+        run: npm run build -w frontend
+        env:
+          VITE_COGNITO_USER_POOL_ID: ${{ secrets.VITE_COGNITO_USER_POOL_ID }}
+          VITE_COGNITO_CLIENT_ID: ${{ secrets.VITE_COGNITO_CLIENT_ID }}
+
+      - name: Sync frontend to S3
+        run: aws s3 sync frontend/dist/ "s3://${{ vars.FRONTEND_BUCKET }}" --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*" \
+            --output text --query 'Invalidation.Id'
