@@ -73,6 +73,18 @@ handler (Lambdaエントリ)
 | repository | CRUD、JOIN、クエリ組み立て | 業務判断 |
 | db | 接続文字列管理、pooled接続の取得 | クエリ内容 |
 
+### 2.1 依存注入（DI）— 確定済み
+
+各レイヤはモジュール singleton を直 import せず、**ファクトリ関数 + 依存注入**で組み立てる（クラスや DI ライブラリは使わない）。
+
+- repository: `createXxxRepository(db: DB)` が repository オブジェクトを返す。型は `export type XxxRepository = ReturnType<typeof createXxxRepository>`。
+- service: `createXxxService(deps)` が必要な repository を `deps` で受け取る（複数依存も可。例: workoutRecords は records+days+exercises）。
+- controller: `createXxxController(deps)` が必要な service を受け取り Hono インスタンスを返す。
+- 認証ミドルウェア: `createAuthMiddleware({ usersRepo })`。`sub → users.id` 解決は `usersRepo.findByCognitoSub` 経由（`db` を直接触らない）。
+- **合成ルート `src/container.ts`**: `createContainer(db = defaultDb)` が db → repositories → services を一括生成する唯一の組み立て点。`app.ts` はこれを使って controller をマウントする。
+
+このため service はモジュールモック（`vi.mock`）不要で、型付きモック repository を `deps` に渡すだけで単体テストできる（テスト方針は `omome_テスト追加TODO.md`）。
+
 ---
 
 ## 3. 認証設計（Cognito + API Gateway Authorizer）
@@ -402,16 +414,18 @@ omome/
 ├─ backend/
 │  ├─ src/
 │  │  ├─ handler.ts            # Lambdaエントリ
-│  │  ├─ app.ts                # Honoアプリ・ルーター組み立て
+│  │  ├─ app.ts                # Honoアプリ・ルーター組み立て（container を利用）
+│  │  ├─ container.ts          # 合成ルート: db→repositories→services（§2.1）
 │  │  ├─ middleware/
-│  │  │  ├─ auth.ts            # Cognitoクレーム取り出し
+│  │  │  ├─ auth.ts            # createAuthMiddleware({ usersRepo })。sub→users.id 解決
 │  │  │  └─ error.ts           # 共通エラーハンドラ
-│  │  ├─ controllers/          # exercises / muscleGroups / workoutDays / workoutRecords / workoutSets / users（statistics は将来追加）
-│  │  ├─ services/
-│  │  ├─ repositories/
+│  │  ├─ controllers/          # createXxxController(deps)。exercises / muscleGroups / workoutDays / workoutRecords / workoutSets / users
+│  │  ├─ services/             # createXxxService(deps)。各 __tests__/ に vitest 単体テスト
+│  │  ├─ repositories/         # createXxxRepository(db)
 │  │  ├─ db/
 │  │  │  ├─ client.ts          # Neon接続（pooled）
 │  │  │  └─ schema.ts          # Drizzleスキーマ定義
+│  │  ├─ test/                 # mockRepositories.ts（型付きモック repository）
 │  │  ├─ dto/                  # リクエスト/レスポンス型
 │  │  └─ lib/                  # uuid, 日時(UTC)ユーティリティ等
 │  ├─ migrations/              # Drizzle Kit 等

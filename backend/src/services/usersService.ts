@@ -1,8 +1,10 @@
-import { usersRepository } from '../repositories/usersRepository.js'
+import type { UsersRepository } from '../repositories/usersRepository.js'
 import { NotFoundError } from '../middleware/error.js'
 import type { UserResponse } from '@omome/shared'
 
-function toResponse(user: NonNullable<Awaited<ReturnType<typeof usersRepository.findById>>>): UserResponse {
+type UserRow = NonNullable<Awaited<ReturnType<UsersRepository['findById']>>>
+
+function toResponse(user: UserRow): UserResponse {
   return {
     id: user.id,
     name: user.name,
@@ -12,16 +14,22 @@ function toResponse(user: NonNullable<Awaited<ReturnType<typeof usersRepository.
   }
 }
 
-export const usersService = {
-  async getMe(userId: string): Promise<UserResponse> {
-    const user = await usersRepository.findById(userId)
-    if (!user) throw new NotFoundError('User not found')
-    return toResponse(user)
-  },
+export function createUsersService(deps: { usersRepo: UsersRepository }) {
+  const { usersRepo } = deps
 
-  async updateMe(userId: string, data: { name: string }): Promise<UserResponse> {
-    const user = await usersRepository.update(userId, { name: data.name })
-    if (!user) throw new NotFoundError('User not found')
-    return toResponse(user)
-  },
+  return {
+    async getMe(userId: string): Promise<UserResponse> {
+      const user = await usersRepo.findById(userId)
+      if (!user) throw new NotFoundError('User not found')
+      return toResponse(user)
+    },
+
+    async updateMe(userId: string, data: { name: string }): Promise<UserResponse> {
+      const user = await usersRepo.update(userId, { name: data.name })
+      if (!user) throw new NotFoundError('User not found')
+      return toResponse(user)
+    },
+  }
 }
+
+export type UsersService = ReturnType<typeof createUsersService>

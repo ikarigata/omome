@@ -1,22 +1,28 @@
-import { muscleGroupsRepository } from '../repositories/muscleGroupsRepository.js'
+import type { MuscleGroupsRepository } from '../repositories/muscleGroupsRepository.js'
 import { NotFoundError } from '../middleware/error.js'
 import type { MuscleGroupResponse } from '@omome/shared'
 
-function toResponse(
-  mg: Awaited<ReturnType<typeof muscleGroupsRepository.findAll>>[number],
-): MuscleGroupResponse {
+type MuscleGroupRow = Awaited<ReturnType<MuscleGroupsRepository['findAll']>>[number]
+
+function toResponse(mg: MuscleGroupRow): MuscleGroupResponse {
   return { id: mg.id, name: mg.name, createdAt: mg.createdAt }
 }
 
-export const muscleGroupsService = {
-  async getAll(): Promise<MuscleGroupResponse[]> {
-    const rows = await muscleGroupsRepository.findAll()
-    return rows.map(toResponse)
-  },
+export function createMuscleGroupsService(deps: { muscleGroupsRepo: MuscleGroupsRepository }) {
+  const { muscleGroupsRepo } = deps
 
-  async getById(id: string): Promise<MuscleGroupResponse> {
-    const row = await muscleGroupsRepository.findById(id)
-    if (!row) throw new NotFoundError('Muscle group not found')
-    return toResponse(row)
-  },
+  return {
+    async getAll(): Promise<MuscleGroupResponse[]> {
+      const rows = await muscleGroupsRepo.findAll()
+      return rows.map(toResponse)
+    },
+
+    async getById(id: string): Promise<MuscleGroupResponse> {
+      const row = await muscleGroupsRepo.findById(id)
+      if (!row) throw new NotFoundError('Muscle group not found')
+      return toResponse(row)
+    },
+  }
 }
+
+export type MuscleGroupsService = ReturnType<typeof createMuscleGroupsService>
