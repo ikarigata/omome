@@ -1,4 +1,4 @@
-import { workoutDaysRepository } from '../repositories/workoutDaysRepository.js'
+import type { WorkoutDaysRepository } from '../repositories/workoutDaysRepository.js'
 import { ForbiddenError, NotFoundError } from '../middleware/error.js'
 import type {
   WorkoutDayResponse,
@@ -7,7 +7,7 @@ import type {
   CalendarResponse,
 } from '@omome/shared'
 
-type DayRow = Awaited<ReturnType<typeof workoutDaysRepository.findById>>
+type DayRow = Awaited<ReturnType<WorkoutDaysRepository['findById']>>
 
 function toResponse(row: NonNullable<DayRow>): WorkoutDayResponse {
   return {
@@ -20,63 +20,69 @@ function toResponse(row: NonNullable<DayRow>): WorkoutDayResponse {
   }
 }
 
-export const workoutDaysService = {
-  async getAll(userId: string): Promise<WorkoutDayResponse[]> {
-    const rows = await workoutDaysRepository.findAllByUser(userId)
-    return rows.map(toResponse)
-  },
+export function createWorkoutDaysService(deps: { workoutDaysRepo: WorkoutDaysRepository }) {
+  const { workoutDaysRepo } = deps
 
-  async getById(userId: string, id: string): Promise<WorkoutDayResponse> {
-    const row = await workoutDaysRepository.findById(id)
-    if (!row) throw new NotFoundError('Workout day not found')
-    if (row.userId !== userId) throw new ForbiddenError()
-    return toResponse(row)
-  },
+  return {
+    async getAll(userId: string): Promise<WorkoutDayResponse[]> {
+      const rows = await workoutDaysRepo.findAllByUser(userId)
+      return rows.map(toResponse)
+    },
 
-  async create(userId: string, data: WorkoutDayCreateRequest): Promise<WorkoutDayResponse> {
-    const { row } = await workoutDaysRepository.insert({
-      id: data.id,
-      userId,
-      date: data.date,
-      title: data.title,
-      notes: data.notes,
-    })
+    async getById(userId: string, id: string): Promise<WorkoutDayResponse> {
+      const row = await workoutDaysRepo.findById(id)
+      if (!row) throw new NotFoundError('Workout day not found')
+      if (row.userId !== userId) throw new ForbiddenError()
+      return toResponse(row)
+    },
 
-    if (row.userId !== userId) throw new ForbiddenError()
-    return toResponse(row)
-  },
+    async create(userId: string, data: WorkoutDayCreateRequest): Promise<WorkoutDayResponse> {
+      const { row } = await workoutDaysRepo.insert({
+        id: data.id,
+        userId,
+        date: data.date,
+        title: data.title,
+        notes: data.notes,
+      })
 
-  async update(
-    userId: string,
-    id: string,
-    data: WorkoutDayUpdateRequest,
-  ): Promise<WorkoutDayResponse> {
-    const existing = await workoutDaysRepository.findById(id)
-    if (!existing) throw new NotFoundError('Workout day not found')
-    if (existing.userId !== userId) throw new ForbiddenError()
+      if (row.userId !== userId) throw new ForbiddenError()
+      return toResponse(row)
+    },
 
-    const row = await workoutDaysRepository.update(id, data)
-    return toResponse(row!)
-  },
+    async update(
+      userId: string,
+      id: string,
+      data: WorkoutDayUpdateRequest,
+    ): Promise<WorkoutDayResponse> {
+      const existing = await workoutDaysRepo.findById(id)
+      if (!existing) throw new NotFoundError('Workout day not found')
+      if (existing.userId !== userId) throw new ForbiddenError()
 
-  async delete(userId: string, id: string): Promise<void> {
-    const existing = await workoutDaysRepository.findById(id)
-    if (!existing) throw new NotFoundError('Workout day not found')
-    if (existing.userId !== userId) throw new ForbiddenError()
-    await workoutDaysRepository.delete(id)
-  },
+      const row = await workoutDaysRepo.update(id, data)
+      return toResponse(row!)
+    },
 
-  async getCalendar(userId: string, year: number, month: number): Promise<CalendarResponse> {
-    const days = await workoutDaysRepository.findCalendarMonth(userId, year, month)
-    return {
-      year,
-      month,
-      days: days.map((d) => ({
-        workoutDayId: d.workoutDayId,
-        date: d.date,
-        title: d.title ?? null,
-        exerciseNames: d.exerciseNames,
-      })),
-    }
-  },
+    async delete(userId: string, id: string): Promise<void> {
+      const existing = await workoutDaysRepo.findById(id)
+      if (!existing) throw new NotFoundError('Workout day not found')
+      if (existing.userId !== userId) throw new ForbiddenError()
+      await workoutDaysRepo.delete(id)
+    },
+
+    async getCalendar(userId: string, year: number, month: number): Promise<CalendarResponse> {
+      const days = await workoutDaysRepo.findCalendarMonth(userId, year, month)
+      return {
+        year,
+        month,
+        days: days.map((d) => ({
+          workoutDayId: d.workoutDayId,
+          date: d.date,
+          title: d.title ?? null,
+          exerciseNames: d.exerciseNames,
+        })),
+      }
+    },
+  }
 }
+
+export type WorkoutDaysService = ReturnType<typeof createWorkoutDaysService>

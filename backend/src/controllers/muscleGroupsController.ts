@@ -1,15 +1,20 @@
 import { Hono } from 'hono'
-import { muscleGroupsService } from '../services/muscleGroupsService.js'
+import type { MuscleGroupsService } from '../services/muscleGroupsService.js'
 import type { HonoEnv } from '../types.js'
 
-export const muscleGroupsController = new Hono<HonoEnv>()
+export function createMuscleGroupsController(deps: { muscleGroupsService: MuscleGroupsService }) {
+  const { muscleGroupsService } = deps
+  const controller = new Hono<HonoEnv>()
 
-muscleGroupsController.get('/', async (c) => {
-  const groups = await muscleGroupsService.getAll()
-  return c.json(groups)
-})
+  controller.get('/', async (c) => {
+    const groups = await muscleGroupsService.getAll()
+    return c.json(groups)
+  })
 
-muscleGroupsController.get('/:id', async (c) => {
-  const group = await muscleGroupsService.getById(c.req.param('id'))
-  return c.json(group)
-})
+  controller.get('/:id', async (c) => {
+    const group = await muscleGroupsService.getById(c.req.param('id'))
+    return c.json(group)
+  })
+
+  return controller
+}
