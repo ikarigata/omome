@@ -118,9 +118,8 @@ Hono は `app.request('/api/v1/...')` でハンドラを直接叩ける。認証
 
 ## フェーズ5: CI への組み込み
 
-- [ ] `omome_CICD導入TODO.md` フェーズA の `lint-and-typecheck` job に `npm test`（ルート集約スクリプト = `npm test`）を追加
-  - **ブロック中**: `.github/workflows/ci.yml` 自体が未作成（CICD導入TODO フェーズAが未着手）。ワークフロー作成時に `npm test` step を入れる。集約スクリプトはローカルで緑（shared 40 / backend 31 / frontend 39 / cognito-trigger 5 = 115 tests）。
-- [ ] shared ビルド → 各 workspace の test がCI上で緑になることを確認
+- [x] `omome_CICD導入TODO.md` フェーズA の `lint-and-typecheck` job に `npm test`（ルート集約スクリプト）を追加（`.github/workflows/ci.yml` 作成済み）
+- [ ] shared ビルド → 各 workspace の test がCI上で緑になることを確認（ローカルでは緑: shared 40 / backend 31 / frontend 39 / cognito-trigger 5 = 115 tests。実 CI 確認は PR にて）
 - [ ] （任意）カバレッジ計測（`vitest --coverage` / `@vitest/coverage-v8`）の導入要否を判断
 
 ---
