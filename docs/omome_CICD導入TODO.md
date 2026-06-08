@@ -16,7 +16,7 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 | テスト | `npm test -w backend` / `vitest run` | **整備済み**（vitest。shared/backend/frontend/cognito-trigger = 115 tests） | `lint-and-typecheck` job に `npm test`（ルート集約スクリプト）を追加済み |
 | Lambda 関数 | 1つ（app のみ） | **2つ**（backend app + cognito-trigger） | CD で両方の `update-function-code` を実行 |
 | frontend env | `VITE_*` 3種（`VITE_API_ENDPOINT` 含む） | `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` の**2種のみ**（API はCloudFront同一オリジン） | `VITE_API_ENDPOINT` は使わない |
-| Terraform state | （要確認） | **ローカル state を repo にコミット**（`infra/terraform.tfstate`） | CD で `terraform apply` は**走らせない**（ephemeral runner からローカル state を更新できない／Neon 再作成リスク）。インフラ変更は手動 `deploy.sh` を維持 |
+| Terraform state | （要確認） | **ローカル state のみ**（`infra/terraform.tfstate`。`.gitignore` で除外＝repo にコミットしない。state に Neon 接続文字列が平文で入るため） | CD で `terraform apply` は**走らせない**（ephemeral runner から手元のローカル state を参照できない／Neon 再作成リスク）。インフラ変更は手動 `deploy.sh` を維持 |
 | Node | 22 | 22（`.nvmrc` = 22） | 一致。`setup-node` で `node-version: '22'` |
 
 ---
@@ -25,7 +25,7 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 - **CI（`ci.yml`）**: `pull_request` → main。typecheck + build + Terraform lint。AWS 認証不要・副作用なし。
 - **CD（`cd.yml`）**: `push` → main。Lambda コード更新（app / cognito-trigger）+ S3 sync + CloudFront 無効化。**OIDC で AWS ロールを assume**（長期キーを置かない）。
-- CD は**アプリ/アセットのデプロイのみ**。`terraform apply` と DB マイグレーション（`migrate.sh`）は CD に含めず、従来どおり手動運用とする（ローカル state + Neon データ損失リスクのため）。
+- CD は**アプリ/アセットのデプロイのみ**。`terraform apply` と DB マイグレーション（`migrate.sh`）は CD に含めず、従来どおり手動運用とする（ローカル state のみ＝ランナーから参照不可 + Neon データ損失リスクのため）。
 - ローカル検証済み（2026-06-08 時点）: 全 workspace の `build` / `typecheck`、frontend の dummy env ビルドはいずれも成功する。
 
 ---
@@ -109,7 +109,7 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 ## スコープ外（今回は CI/CD に含めない）
 
-- `terraform apply`（インフラ変更）— ローカル state コミット運用のため手動 `deploy.sh` を維持。将来リモート state（S3 backend 等）へ移行したら CD 化を再検討。
+- `terraform apply`（インフラ変更）— ローカル state のみの運用（repo 未コミット）のため手動 `deploy.sh` を維持。将来リモート state（S3 backend 等）へ移行したら CD 化を再検討。
 - DB マイグレーション（`migrate.sh` / `drizzle-kit push` + seed）— `DIRECT_URL` 必要。手動運用を維持。
   - ⚠️ 運用順序の注意: マイグレーションは Cognito サインアップより**前**に流すこと（`users` 行欠落で全リクエスト 401 になる既知の落とし穴）。
 - テスト step — テスト未整備のため。テスト導入後に CI の `lint-and-typecheck` job へ追加する。
