@@ -7,12 +7,11 @@
 # ─────────────────────────────────────────────────────────────────
 
 # GitHub Actions の OIDC ID プロバイダ。
-# audience は固定（sts.amazonaws.com）。thumbprint は AWS 側で GitHub の
-# 証明書チェーンを検証するため実質無視されるが、resource 要件として既知値を渡す。
-resource "aws_iam_openid_connect_provider" "github" {
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+# アカウントに既存（token.actions.githubusercontent.com はアカウント単位で1つ）の
+# ため、新規作成せず data source で参照する。共有リソースを Terraform の管理対象
+# （destroy 範囲）に含めない狙い。未作成の環境では先に手動 or 別管理で作成すること。
+data "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
 }
 
 # GitHub Actions が assume するロール。
@@ -24,7 +23,7 @@ resource "aws_iam_role" "github_actions" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
+      Principal = { Federated = data.aws_iam_openid_connect_provider.github.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = {
