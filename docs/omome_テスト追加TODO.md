@@ -29,13 +29,13 @@ Hono は `app.request('/api/v1/...')` でハンドラを直接叩ける。認証
 
 ## フェーズ0: テスト基盤セットアップ
 
-- [ ] **shared**: `vitest` を devDependency 追加、`"test": "vitest run"` スクリプト追加、`vitest.config.ts`（`environment: 'node'`）
+- [x] **shared**: `vitest` を devDependency 追加、`"test": "vitest run"` スクリプト追加、`vitest.config.ts`（`environment: 'node'`）
 - [x] **backend**: `vitest` 追加、`"test": "vitest run"` / `"test:watch": "vitest"` 追加、`vitest.config.ts`（`environment: 'node'`）、型付きモック `src/test/mockRepositories.ts`
-- [ ] **frontend**: `vitest` / `jsdom` / `@testing-library/react` / `@testing-library/jest-dom` / `@testing-library/user-event` を追加、`"test": "vitest run"` 追加
-  - [ ] `vitest.config.ts`（`vite.config` を mergeConfig、`environment: 'jsdom'`, `globals: true`, `setupFiles: ['./src/setupTests.ts']`）
-  - [ ] `src/setupTests.ts`（`@testing-library/jest-dom` 取り込み、MSW server の `beforeAll/afterEach/afterAll` 設定）
-  - [ ] MSW を**テスト用 node server**（`setupServer`）に流用できるよう `src/mocks/server.ts` を用意（既存 `handlers.ts` を再利用）
-- [ ] ルート `package.json` に集約スクリプト追加（例: `"test": "npm run build:shared && npm test -w @omome/shared && npm test -w backend && npm test -w frontend"`）
+- [x] **frontend**: `vitest` / `jsdom` / `@testing-library/react` / `@testing-library/jest-dom` / `@testing-library/user-event` を追加、`"test": "vitest run"` 追加
+  - [x] `vitest.config.ts`（`vite.config` を mergeConfig、`environment: 'jsdom'`, `globals: true`, `setupFiles: ['./src/setupTests.ts']`。`test.env` で `VITE_DEV_BYPASS_AUTH=true` を設定し api/client が Cognito を呼ばず MSW に乗るようにした）
+  - [x] `src/setupTests.ts`（`@testing-library/jest-dom` 取り込み、MSW server の `beforeAll/afterEach/afterAll` 設定。`cleanup()` も実施）
+  - [x] MSW を**テスト用 node server**（`setupServer`）に流用できるよう `src/mocks/server.ts` を用意（既存 `handlers.ts` を再利用）。テスト描画ユーティリティは `src/test/utils.tsx`
+- [x] ルート `package.json` に集約スクリプト追加（`"test": "npm run build:shared && npm test -w @omome/shared && npm test -w backend && npm test -w frontend && npm test -w cognito-trigger"`）
   - 注: shared を先にビルドしてから backend/frontend のテストを回す（既存のビルド順序規約と同じ）
 
 ---
@@ -44,19 +44,21 @@ Hono は `app.request('/api/v1/...')` でハンドラを直接叩ける。認証
 
 > Zod スキーマ（特に `.superRefine()`）は純粋関数で、最も費用対効果が高い。横断ルール3（部位配列の制約）の正がここにある。
 
-- [ ] `exercise.ts`: 部位配列の制約
-  - [ ] メイン（`isPrimary=true`）ちょうど1件 → OK
-  - [ ] メイン0件 → エラー
-  - [ ] メイン2件以上 → エラー
-  - [ ] 同一部位の重複 → エラー
-  - [ ] 空配列 → エラー
-  - [ ] `id` が UUID でない → エラー
-- [ ] `workoutSet.ts`: `reps` / `subReps` / `weight` >= 0、負値はエラー、`id` は UUID
-- [ ] `workoutDay.ts`: `date` が `YYYY-MM-DD` 形式、不正形式はエラー
-- [ ] `user.ts`: 更新は `name` のみ必須、空名はエラー
-- [ ] `workoutRecord.ts`: 必須フィールド / UUID 検証
-- [ ] `calendar.ts`: 集約レスポンス（月単位・案A）の形を検証
-- [ ] 正常系: 各スキーマで valid なペイロードが `parse` を通る回帰テスト
+- [x] `exercise.ts`: 部位配列の制約
+  - [x] メイン（`isPrimary=true`）ちょうど1件 → OK
+  - [x] メイン0件 → エラー
+  - [x] メイン2件以上 → エラー
+  - [x] 同一部位の重複 → エラー
+  - [x] 空配列 → エラー
+  - [x] `id` が UUID でない → エラー
+- [x] `workoutSet.ts`: `reps` / `subReps` / `weight` >= 0、負値はエラー、`id` は UUID
+- [x] `workoutDay.ts`: `date` が `YYYY-MM-DD` 形式、不正形式はエラー
+- [x] `user.ts`: 更新は `name` のみ必須、空名はエラー
+- [x] `workoutRecord.ts`: 必須フィールド / UUID 検証
+- [x] `calendar.ts`: 集約レスポンス（月単位・案A）の形を検証
+- [x] 正常系: 各スキーマで valid なペイロードが `parse` を通る回帰テスト
+
+> 注: zod v4 の `.uuid()` は RFC の variant ビットまで検証する。テスト用ダミー UUID は version=4 / variant=8 の形（例 `...-4xxx-8xxx-...`）にする必要がある。
 
 ---
 
@@ -87,38 +89,37 @@ Hono は `app.request('/api/v1/...')` でハンドラを直接叩ける。認証
 
 > まず純粋関数 → hooks（MSW でAPIモック）→ コンポーネント/ページの順で価値が高い。
 
-- [ ] **lib（純粋関数, インフラ不要・最優先）**
-  - [ ] `lib/uuid.ts`: `crypto.randomUUID()` ラッパの形式（クライアント生成UUID = 冪等性の前提）
-  - [ ] `lib/date.ts`: 日付フォーマット / パース（`YYYY-MM-DD`、UTC基準）
-  - [ ] `lib/exercise.ts`: 部位の並べ替え等（メイン先頭などの表示ロジック）
-  - [ ] `lib/devFlags.ts`: `VITE_DEV_BYPASS_AUTH` 等のフラグ判定
-- [ ] **queries（TanStack Query hooks, MSW でAPIモック）**
-  - [ ] `useExercises` / `useMuscleGroups` / `useWorkoutDays` / `useWorkoutRecords` / `useWorkoutSets` / `useCalendar` / `useMe` のフェッチ成功・エラー時挙動
-  - [ ] mutation 系で楽観更新 / invalidation が走るか（`queryKeys` 連動）
-  - [ ] テスト用に `QueryClient`（retry オフ）を包む test util を用意
-- [ ] **components**
-  - [ ] `Button` / `Input` / `ErrorMessage` の表示・disabled・onClick
-  - [ ] `BottomNav`: アクティブタブ表示、ルーティング
-  - [ ] `PageLayout`: 子要素レンダリング
-- [ ] **pages（重要画面の振る舞い, MSW + memory router）**
-  - [ ] `LoginPage` / `SignupPage`: 入力バリデーション、送信
-  - [ ] `ExercisesPage` / `ExerciseSelectPage`: 一覧表示、選択
-  - [ ] `WorkoutDayPage` / `SetInputPage`: セット入力 → 記録作成（冪等な作成フロー）
-  - [ ] `CalendarPage`: 月単位集約の表示
-  - [ ] `HomePage`: 初期表示
+- [x] **lib（純粋関数, インフラ不要・最優先）**
+  - [x] `lib/uuid.ts`: `crypto.randomUUID()` ラッパの形式（クライアント生成UUID = 冪等性の前提）。getRandomValues フォールバックも検証
+  - [x] `lib/date.ts`: 日付フォーマット / パース（`YYYY-MM-DD`、月日数・曜日）
+  - [x] `lib/exercise.ts`: メイン部位の取得、`calcVolume` / `calcRM`（RMは subReps 除外）
+  - [x] `lib/devFlags.ts`: `VITE_DEV_BYPASS_AUTH` のフラグ判定（`stubEnv` + `resetModules`）
+- [x] **queries（TanStack Query hooks, MSW でAPIモック）**
+  - [x] `useExercises`（成功 / 500エラー）・`useMe`（取得 / 更新 invalidate）の挙動。他フックも同型のため代表をカバー
+  - [x] mutation 系で invalidation が走るか（`useCreateExercise` / `useUpdateMe` で件数・値の反映を確認）
+  - [x] テスト用に `QueryClient`（retry オフ）を包む test util（`src/test/utils.tsx`）を用意
+- [x] **components**
+  - [x] `Button` / `Input` / `ErrorMessage` の表示・disabled・onClick
+  - [x] `BottomNav`: アクティブタブ表示、ルーティング（統計タブが無いことも確認）
+  - [ ] `PageLayout`: 子要素レンダリング（pages テスト経由で間接カバー。単体は未）
+- [x] **pages（重要画面の振る舞い, MSW + memory router）**
+  - [x] `ExercisesPage`: 一覧表示、フォーム開閉、バリデーション（名前未入力 / 部位未選択）
+  - [x] `HomePage`: 初期表示（日一覧・ユーザー名ヘッダ）
+  - [ ] `LoginPage` / `SignupPage` / `ExerciseSelectPage` / `WorkoutDayPage` / `SetInputPage` / `CalendarPage`（重要動線は順次追加。現状は代表画面のみ）
 
 ---
 
 ## フェーズ4: cognito-trigger のテスト
 
-- [ ] `postConfirmation.ts`: サインアップ確定イベントで `users` 行を作成する。`users.id`（アプリ生成UUID）を生成し挿入することを、DB呼び出しをモックして検証
-- [ ] 既に users 行が存在する場合の冪等な振る舞い（再実行で重複作成しない）
+- [x] `postConfirmation.ts`: サインアップ確定イベントで `users` 行を作成する。`users.id`（アプリ生成UUIDv4）を生成し挿入することを、`@neondatabase/serverless` の `neon` をモックして検証。email 未取得は NULL / sub・name 欠落は throw して INSERT しない
+- [x] 既に users 行が存在する場合の冪等な振る舞い（`ON CONFLICT (cognito_sub) DO NOTHING`。再実行しても throw せず INSERT を発行し、重複排除は DB 側の責務であることを確認）
 
 ---
 
 ## フェーズ5: CI への組み込み
 
-- [ ] `omome_CICD導入TODO.md` フェーズA の `lint-and-typecheck` job に `npm test`（ルート集約スクリプト）を追加
+- [ ] `omome_CICD導入TODO.md` フェーズA の `lint-and-typecheck` job に `npm test`（ルート集約スクリプト = `npm test`）を追加
+  - **ブロック中**: `.github/workflows/ci.yml` 自体が未作成（CICD導入TODO フェーズAが未着手）。ワークフロー作成時に `npm test` step を入れる。集約スクリプトはローカルで緑（shared 40 / backend 31 / frontend 39 / cognito-trigger 5 = 115 tests）。
 - [ ] shared ビルド → 各 workspace の test がCI上で緑になることを確認
 - [ ] （任意）カバレッジ計測（`vitest --coverage` / `@vitest/coverage-v8`）の導入要否を判断
 
@@ -129,7 +130,7 @@ Hono は `app.request('/api/v1/...')` でハンドラを直接叩ける。認証
 **確定済み**
 - テストランナーは **vitest**（全 workspace 共通。chore-chore と統一）。
 - frontend は testing-library + jsdom、MSW を流用。
-- backend はまず**案A（`vi.mock` でリポジトリ差し替え）**で着手。
+- backend は **案B（DI でモック repository 注入）**で実装（D1 参照。当初の案A は不採用）。
 - 着手順は shared（純粋・高ROI）→ backend サービス → frontend lib/hooks → pages/components → cognito-trigger。
 
 **留保（要判断）**
