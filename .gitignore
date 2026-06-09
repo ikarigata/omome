@@ -4,6 +4,9 @@ dist/
 .env.local
 *.zip
 
+# 機微情報を含むローカル専用スクリプト（AWS ロール ARN / Cognito ID 等）
+*.local.sh
+
 # Terraform
 infra/.terraform/
 infra/.placeholder/
