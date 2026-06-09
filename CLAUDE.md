@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクトの状態
 
-このリポジトリは**実装前**です。アプリケーションコードはまだ存在せず、`docs/` 内の設計書（日本語）と devcontainer の設定のみがあります。設計書が正（source of truth）であり、実装の仕様として扱ってください。決定が変わったら設計書を更新して同期を保つこと（各設計書に「確定済み / 留保」のセクションがあり、確定事項と未決事項を管理しています）。
+全ワークスペース（`shared` / `backend` / `cognito-trigger` / `frontend` / `infra`）が**実装済み**で、AWS + Neon にデプロイ済みです。`docs/` 内の設計書（日本語）が引き続き仕様の正（source of truth）であり、設計と実装の両方を同期させて保つこと。決定や挙動が変わったら設計書を更新すること（各設計書に「確定済み / 留保」のセクションがあり、確定事項と未決事項を管理しています）。実装が設計書と食い違っていたら、どちらが正しいかを確認してから直すこと。
 
 **omome** はトレーニング記録アプリで、旧 `lift_log`（Spring Boot/Java + 自前 JWT）を一から作り直すものです。旧リポジトリ（`https://github.com/ikarigata/lift_log.git`）は UI の見た目と業務ロジックの**参考としてのみ**参照します。見た目は踏襲しますが、アーキテクチャ（レイヤ構成・状態管理・API層・認証）は新規に作り直します。旧コードを丸ごと移植しないこと。旧コードは特に冪等性を欠いており、それが新設計の中心的な関心事です。
 
@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 確定済み前提（TODO より）: zod は **v4**。`shared` は **ESM**（module/moduleResolution）。`cognito-trigger` は workspace に含める。Hono + Drizzle + Drizzle Kit。API認可は Cognito の**アクセストークン**を使用。Cognito SDK は **Amplify Auth (Gen2)**。カレンダーAPIは集約レスポンス（月単位、案A）。
 
-## 計画されているアーキテクチャ（全体像）
+## アーキテクチャ（全体像）
 
 npm workspaces のモノレポ。ビルド順序が重要: **`shared` を最初にビルド**し、その後に他がそれを参照する。
 
@@ -34,7 +34,7 @@ infra/             Terraform（AWS + Neon コミュニティ Provider）。
 
 ### 共有するもの / しないもの（最重要の区別）
 
-`@omome/shared` が持つのは **DTO層のみ**の Zod スキーマと、そこから導出した型です。Drizzle の DB スキーマ（`backend/db/schema.ts`）は**共有しません**。DTO はテーブルと1対1で対応しません。例えば DB では `exercises` と `exercise_muscle_groups` 中間テーブルが分かれていますが、API では部位を `muscleGroups: [{ id, isPrimary }]` のネスト配列として公開します。したがって DTO の Zod スキーマは Drizzle から生成せず、`shared` に**手書き**します。同一の Zod スキーマを双方で実行します。フロントは送信前の UX バリデーションに使い、バックは本番の入力バリデーションに使います。フロントにあるからといってバックがバリデーションを省略することはありません。
+`@omome/shared` が持つのは **DTO層のみ**の Zod スキーマと、そこから導出した型です。Drizzle の DB スキーマ（`backend/src/db/schema.ts`）は**共有しません**。DTO はテーブルと1対1で対応しません。例えば DB では `exercises` と `exercise_muscle_groups` 中間テーブルが分かれていますが、API では部位を `muscleGroups: [{ id, isPrimary }]` のネスト配列として公開します。したがって DTO の Zod スキーマは Drizzle から生成せず、`shared` に**手書き**します。同一の Zod スキーマを双方で実行します。フロントは送信前の UX バリデーションに使い、バックは本番の入力バリデーションに使います。フロントにあるからといってバックがバリデーションを省略することはありません。
 
 ### バックエンドのレイヤ構成
 
@@ -57,7 +57,22 @@ infra/             Terraform（AWS + Neon コミュニティ Provider）。
 
 ## コマンド
 
-ビルド/テスト/lint のツールはまだ存在しません。`package.json` は `docs/omome_実装TODO.md` のフェーズ0で作成します。雛形を作る際はそのフェーズ順に従うこと: infra → shared → backend / cognito-trigger → infra（トリガー紐付け）→ frontend。`shared` ができたら、フロント/バックのビルド前に必ずビルド（`tsc`）すること。開発時は `--watch` で常駐させる。
+ルートの `package.json` がワークスペースをまとめる。`shared` は他のビルド/テストの前提なので、ルートスクリプトは内部で先に `build:shared` を流す。
+
+ルート（リポジトリ直下で実行）:
+
+- `npm run build:shared` / `npm run dev:shared` — `shared` を tsc でビルド（dev は `--watch` 常駐）。フロント/バックを触る前に必ずビルド済みにする。
+- `npm run build:backend` / `npm run build:frontend` — `shared` ビルド後に各成果物をビルド。
+- `npm run dev:backend` / `npm run dev:frontend` — `shared` を watch しつつ各 dev サーバを起動。
+- `npm test` — `shared` をビルドしてから shared / backend / frontend / cognito-trigger の全テストを実行。
+
+各ワークスペース（`-w <name>` で実行、または当該ディレクトリ内）:
+
+- backend: `npm test` / `npm run typecheck` / `npm run build`（esbuild）。DB 系は `db:generate`（マイグレーション生成）、`db:migrate` / `db:push`、`db:studio`、`db:seed`（部位マスタ投入）。Drizzle Kit は `DIRECT_URL` を使う。
+- frontend: `npm run dev`（Vite、MSW モック付き）/ `npm test`（Vitest）/ `npm run typecheck` / `npm run build`。
+- shared / cognito-trigger: `npm test`、`npm run build`。
+
+DB マイグレーション + シードはルートの `migrate.sh`（`AWS_PROFILE=terraform` で Terraform から `DIRECT_URL` を取得 → `db:push` → `seed`）。デプロイは `deploy.sh`（手動デプロイ）。CD については後述。
 
 ## 環境
 
