@@ -16,7 +16,7 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 | テスト | `npm test -w backend` / `vitest run` | **整備済み**（vitest。shared/backend/frontend/cognito-trigger = 115 tests） | `lint-and-typecheck` job に `npm test`（ルート集約スクリプト）を追加済み |
 | Lambda 関数 | 1つ（app のみ） | **2つ**（backend app + cognito-trigger） | CD で両方の `update-function-code` を実行 |
 | frontend env | `VITE_*` 3種（`VITE_API_ENDPOINT` 含む） | `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` の**2種のみ**（API はCloudFront同一オリジン） | `VITE_API_ENDPOINT` は使わない |
-| Terraform state | （要確認） | **ローカル state を repo にコミット**（`infra/terraform.tfstate`） | CD で `terraform apply` は**走らせない**（ephemeral runner からローカル state を更新できない／Neon 再作成リスク）。インフラ変更は手動 `deploy.sh` を維持 |
+| Terraform state | （要確認） | **ローカル state のみ**（`infra/terraform.tfstate`。`.gitignore` で除外＝repo にコミットしない。state に Neon 接続文字列が平文で入るため） | CD で `terraform apply` は**走らせない**（ephemeral runner から手元のローカル state を参照できない／Neon 再作成リスク）。インフラ変更は手動 `deploy.sh` を維持 |
 | Node | 22 | 22（`.nvmrc` = 22） | 一致。`setup-node` で `node-version: '22'` |
 
 ---
@@ -25,7 +25,7 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 - **CI（`ci.yml`）**: `pull_request` → main。typecheck + build + Terraform lint。AWS 認証不要・副作用なし。
 - **CD（`cd.yml`）**: `push` → main。Lambda コード更新（app / cognito-trigger）+ S3 sync + CloudFront 無効化。**OIDC で AWS ロールを assume**（長期キーを置かない）。
-- CD は**アプリ/アセットのデプロイのみ**。`terraform apply` と DB マイグレーション（`migrate.sh`）は CD に含めず、従来どおり手動運用とする（ローカル state + Neon データ損失リスクのため）。
+- CD は**アプリ/アセットのデプロイのみ**。`terraform apply` と DB マイグレーション（`migrate.sh`）は CD に含めず、従来どおり手動運用とする（ローカル state のみ＝ランナーから参照不可 + Neon データ損失リスクのため）。
 - ローカル検証済み（2026-06-08 時点）: 全 workspace の `build` / `typecheck`、frontend の dummy env ビルドはいずれも成功する。
 
 ---
@@ -58,34 +58,35 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 ---
 
-## フェーズB: CD ワークフロー（`.github/workflows/cd.yml`）
+## フェーズB: CD ワークフロー（`.github/workflows/cd.yml`）✅ 作成済み（実 CD 実行はフェーズC/D 完了後）
 
 > トリガー: `push` branches: [main]。`permissions: id-token: write / contents: read`（OIDC 用）。
 
-- [ ] job: **deploy**
-  - [ ] checkout / setup-node（22, cache npm）
-  - [ ] `aws-actions/configure-aws-credentials@v4`（`role-to-assume: ${{ secrets.AWS_ROLE_ARN }}`, `aws-region: ${{ vars.AWS_REGION }}`）
-  - [ ] `npm ci`
-  - [ ] `npm run build:shared`
-  - [ ] `npm run build -w backend` → `(cd backend/dist && zip -qr lambda.zip index.js)`
-  - [ ] `npm run build -w cognito-trigger` → `(cd cognito-trigger/dist && zip -qr lambda.zip index.js)`
-  - [ ] Deploy Lambda (app): `aws lambda update-function-code --function-name ${{ vars.LAMBDA_APP_FUNCTION_NAME }} --zip-file fileb://backend/dist/lambda.zip` → `aws lambda wait function-updated`
-  - [ ] Deploy Lambda (cognito-trigger): 同様に `${{ vars.LAMBDA_TRIGGER_FUNCTION_NAME }}` / `cognito-trigger/dist/lambda.zip`
-  - [ ] `npm run build -w frontend`（env: `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` を secrets から）
-  - [ ] `aws s3 sync frontend/dist/ s3://${{ vars.FRONTEND_BUCKET }} --delete`
-  - [ ] `aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"`
-- [ ] main へのマージで一連が成功することを確認
+- [x] job: **deploy**
+  - [x] checkout / setup-node（22, cache npm）
+  - [x] `aws-actions/configure-aws-credentials@v4`（`role-to-assume: ${{ secrets.AWS_ROLE_ARN }}`, `aws-region: ${{ vars.AWS_REGION }}`）
+  - [x] `npm ci`
+  - [x] `npm run build:shared`
+  - [x] `npm run build -w backend` → `(cd backend/dist && zip -qr lambda.zip index.js)`
+  - [x] `npm run build -w cognito-trigger` → `(cd cognito-trigger/dist && zip -qr lambda.zip index.js)`
+  - [x] Deploy Lambda (app): `aws lambda update-function-code --function-name ${{ vars.LAMBDA_APP_FUNCTION_NAME }} --zip-file fileb://backend/dist/lambda.zip` → `aws lambda wait function-updated`
+  - [x] Deploy Lambda (cognito-trigger): 同様に `${{ vars.LAMBDA_TRIGGER_FUNCTION_NAME }}` / `cognito-trigger/dist/lambda.zip`
+  - [x] `npm run build -w frontend`（env: `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` を secrets から）
+  - [x] `aws s3 sync frontend/dist/ s3://${{ vars.FRONTEND_BUCKET }} --delete`
+  - [x] `aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"`
+- [ ] main へのマージで一連が成功することを確認（OIDC ロール=フェーズC / Secrets・Variables=フェーズD の登録後）
 
 ---
 
-## フェーズC: AWS OIDC 連携（CD の前提）
+## フェーズC: AWS OIDC 連携（CD の前提）✅ Terraform 定義済み（`terraform apply` は未実行）
 
 > CD は IAM ユーザの長期キーではなく、GitHub OIDC で短命クレデンシャルを取得する。`infra/` に Terraform で定義する。
+> 定義ファイル: `infra/github_oidc.tf`（OIDC プロバイダ + ロール + 最小権限ポリシー）。対象リポジトリは `var.github_repo`（既定 `ikarigata/omome`）。
 
-- [ ] OIDC プロバイダ `token.actions.githubusercontent.com` を IAM に登録（`infra/iam.tf` 等）
-- [ ] GitHub Actions 用 IAM ロール作成。信頼ポリシーで `repo:ikarigata/omome:*`（または `ref:refs/heads/main`）に限定
-- [ ] ロールの権限: `lambda:UpdateFunctionCode` / `lambda:GetFunction`（wait 用）/ `s3:PutObject`/`DeleteObject`/`ListBucket`（対象バケット）/ `cloudfront:CreateInvalidation`。最小権限で付与
-- [ ] ロール ARN を出力（`terraform output`）し、後述の GitHub secret に登録
+- [x] OIDC プロバイダ `token.actions.githubusercontent.com` を IAM に登録（`infra/github_oidc.tf`）
+- [x] GitHub Actions 用 IAM ロール作成。信頼ポリシーで `repo:ikarigata/omome:ref:refs/heads/main` に限定
+- [x] ロールの権限: `lambda:UpdateFunctionCode` / `lambda:GetFunction`（wait 用）/ `s3:PutObject`/`DeleteObject`/`ListBucket`（対象バケット）/ `cloudfront:CreateInvalidation`。最小権限で付与
+- [x] ロール ARN を出力（`output "github_actions_role_arn"`）し、後述の GitHub secret に登録（`terraform apply` 後）
 
 ---
 
@@ -108,7 +109,7 @@ chore-chore の YAML をそのまま貼ると壊れる/意図とズレる箇所�
 
 ## スコープ外（今回は CI/CD に含めない）
 
-- `terraform apply`（インフラ変更）— ローカル state コミット運用のため手動 `deploy.sh` を維持。将来リモート state（S3 backend 等）へ移行したら CD 化を再検討。
+- `terraform apply`（インフラ変更）— ローカル state のみの運用（repo 未コミット）のため手動 `deploy.sh` を維持。将来リモート state（S3 backend 等）へ移行したら CD 化を再検討。
 - DB マイグレーション（`migrate.sh` / `drizzle-kit push` + seed）— `DIRECT_URL` 必要。手動運用を維持。
   - ⚠️ 運用順序の注意: マイグレーションは Cognito サインアップより**前**に流すこと（`users` 行欠落で全リクエスト 401 になる既知の落とし穴）。
 - テスト step — テスト未整備のため。テスト導入後に CI の `lint-and-typecheck` job へ追加する。

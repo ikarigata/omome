@@ -13,6 +13,9 @@ infra/.terraform.lock.hcl
 infra/*.tfvars
 infra/*.tfvars.json
 
+# ローカル専用スクリプト（機微情報を含む。CD の Secrets/Variables 登録用など）
+*.local.sh
+
 # Build outputs
 backend/dist/
 cognito-trigger/dist/

@@ -66,3 +66,12 @@ devcontainer（`mcr.microsoft.com/devcontainers/typescript-node`）に AWS CLI�
 Terraform および AWS CLI の実行には `AWS_PROFILE=terraform` を指定すること（`~/.aws` に設定済みのプロファイル）。このプロファイルには IAM ロール作成を含む必要な権限がある。`deploy.sh` では冒頭で `export AWS_PROFILE=terraform` を設定済み。手動で terraform コマンドを実行する場合も同様に指定すること。
 
 Neon の org_id は `org-blue-meadow-49976132`（`infra/neon.tf` の `neon_project` リソースに設定済み）。
+
+## CD（`.github/workflows/cd.yml`）
+
+`main` への push で発火し、OIDC で短命クレデンシャルを取得して **アプリのコードとフロントエンドアセットのみ**をデプロイする（Lambda 2関数の `update-function-code` → S3 sync → CloudFront 無効化）。CI は `pull_request` でのみ走るので、`main` への直 push はテストを素通りする点に注意。
+
+⚠️ **CD はスキーマ変更もインフラ変更も反映しない**（`drizzle-kit` も `terraform apply` も実行しない。意図的に分離している）。したがって:
+
+- **DB スキーマを変えるリリース**は、CD 任せにせず手動で `migrate.sh` を流すこと。順序が重要で、特に新カラムを使うコードはマイグレーション完了後にデプロイする（[[deploy-migrate-before-signup]] 参照）。
+- **`infra/*.tf` を変える PR** をマージしても CD ではインフラに反映されない。`AWS_PROFILE=terraform terraform apply` を手動で実行すること（Neon 再作成リスクを避ける方針とも整合）。CD ロールの権限変更などもこれに該当する。
