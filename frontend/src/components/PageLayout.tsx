@@ -10,7 +10,7 @@ interface PageLayoutProps {
 
 export function PageLayout({ title, headerRight, children, hideNav }: PageLayoutProps) {
   return (
-    <div className="flex flex-col min-h-dvh">
+    <div className="flex flex-col min-h-dvh max-w-md mx-auto">
       {title !== undefined && (
         <header className="sticky top-0 z-10 bg-surface-primary border-b border-border-default px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg font-bold">{title}</h1>
