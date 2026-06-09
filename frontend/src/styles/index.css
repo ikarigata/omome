@@ -48,3 +48,11 @@
     box-sizing: border-box;
   }
 }
+
+@layer utilities {
+  /* ボトムナビの背景を端末下端（ホームインジケータ領域）まで伸ばす。
+     h-16 の行はそのままに、safe-area 分の余白を背景色ごと下に足す。 */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
