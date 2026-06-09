@@ -65,7 +65,7 @@ export function HomePage() {
         ))}
       </div>
 
-      <div className="fixed bottom-20 inset-x-0 z-20 pointer-events-none">
+      <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] inset-x-0 z-20 pointer-events-none">
         <div className="max-w-md mx-auto px-4 flex justify-end">
           <button
             onClick={() => void handlePlusClick()}
