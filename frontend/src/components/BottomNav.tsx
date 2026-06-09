@@ -62,7 +62,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-navigation-bg text-navigation-text safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center justify-around h-16 px-2 max-w-md mx-auto">
         <NavLink to="/" end className={navLinkClass}>
           <HomeIcon />
           <span>ホーム</span>
