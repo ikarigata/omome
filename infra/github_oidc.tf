@@ -51,7 +51,8 @@ resource "aws_iam_role_policy" "github_actions" {
         Effect = "Allow"
         Action = [
           "lambda:UpdateFunctionCode",
-          "lambda:GetFunction",
+          # wait function-updated は GetFunctionConfiguration を叩く（GetFunction とは別アクション）
+          "lambda:GetFunctionConfiguration",
         ]
         Resource = [
           aws_lambda_function.app.arn,
