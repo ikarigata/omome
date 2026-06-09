@@ -1,8 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
-import { todayString } from '@/lib/date'
-import { generateId } from '@/lib/uuid'
-import { useWorkoutDays } from '@/queries/useWorkoutDays'
-import { useCreateWorkoutDay } from '@/queries/useWorkoutDays'
+import { NavLink } from 'react-router-dom'
 
 function HomeIcon() {
   return (
@@ -22,14 +18,6 @@ function CalendarIcon() {
   )
 }
 
-function PlusIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-8">
-      <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
-    </svg>
-  )
-}
-
 function DumbbellIcon() {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-6">
@@ -39,24 +27,6 @@ function DumbbellIcon() {
 }
 
 export function BottomNav() {
-  const navigate = useNavigate()
-  const { data: workoutDays } = useWorkoutDays()
-  const createDay = useCreateWorkoutDay()
-
-  async function handlePlusClick() {
-    const today = todayString()
-    const existing = workoutDays?.find((d) => d.date === today)
-    if (existing) {
-      navigate(`/workout/${existing.id}`)
-      return
-    }
-    const result = await createDay.mutateAsync({
-      id: generateId(),
-      date: today,
-    })
-    navigate(`/workout/${result.id}`)
-  }
-
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `flex flex-col items-center gap-0.5 text-xs transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`
 
@@ -72,15 +42,6 @@ export function BottomNav() {
           <CalendarIcon />
           <span>カレンダー</span>
         </NavLink>
-
-        <button
-          onClick={() => void handlePlusClick()}
-          className="flex flex-col items-center gap-0.5 text-xs opacity-100"
-          disabled={createDay.isPending}
-        >
-          <PlusIcon />
-          <span>今日</span>
-        </button>
 
         <NavLink to="/exercises" className={navLinkClass}>
           <DumbbellIcon />

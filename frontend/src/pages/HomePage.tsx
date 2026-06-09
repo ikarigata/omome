@@ -1,15 +1,40 @@
 import { useNavigate } from 'react-router-dom'
-import { useWorkoutDays } from '@/queries/useWorkoutDays'
+import { useWorkoutDays, useCreateWorkoutDay } from '@/queries/useWorkoutDays'
 import { useMe } from '@/queries/useMe'
 import { PageLayout } from '@/components/PageLayout'
-import { formatDateJa, getDayOfWeekJa } from '@/lib/date'
+import { formatDateJa, getDayOfWeekJa, todayString } from '@/lib/date'
+import { generateId } from '@/lib/uuid'
+
+function PlusIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-8">
+      <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
+    </svg>
+  )
+}
 
 export function HomePage() {
   const navigate = useNavigate()
   const { data: me } = useMe()
   const { data: days, isLoading } = useWorkoutDays()
+  const createDay = useCreateWorkoutDay()
 
   const sorted = days ? [...days].sort((a, b) => b.date.localeCompare(a.date)) : []
+
+  // トレーニングは1日1登録。同じ日が既にあればその画面へ、なければ作成して遷移する。
+  async function handlePlusClick() {
+    const today = todayString()
+    const existing = days?.find((d) => d.date === today)
+    if (existing) {
+      navigate(`/workout/${existing.id}`)
+      return
+    }
+    const result = await createDay.mutateAsync({
+      id: generateId(),
+      date: today,
+    })
+    navigate(`/workout/${result.id}`)
+  }
 
   return (
     <PageLayout title={me ? `${me.name} のトレーニング` : 'omome'}>
@@ -38,6 +63,19 @@ export function HomePage() {
             {day.notes && <p className="text-sm text-content-inverse/60">{day.notes}</p>}
           </button>
         ))}
+      </div>
+
+      <div className="fixed bottom-20 inset-x-0 z-20 pointer-events-none">
+        <div className="max-w-md mx-auto px-4 flex justify-end">
+          <button
+            onClick={() => void handlePlusClick()}
+            disabled={createDay.isPending}
+            aria-label="今日のトレーニングを追加"
+            className="pointer-events-auto flex items-center justify-center size-14 rounded-full bg-interactive-primary text-content-inverse shadow-lg hover:bg-interactive-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <PlusIcon />
+          </button>
+        </div>
       </div>
     </PageLayout>
   )
