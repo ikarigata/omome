@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -17,10 +16,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useWorkoutRecordsByDay } from '@/queries/useWorkoutRecords'
 import { useWorkoutSets, useCreateWorkoutSet, useUpdateWorkoutSet, useDeleteWorkoutSet } from '@/queries/useWorkoutSets'
-import { useExercise } from '@/queries/useExercises'
-import { PageLayout } from '@/components/PageLayout'
 import { Button } from '@/components/Button'
 import { generateId } from '@/lib/uuid'
 import { calcVolume, calcRM } from '@/lib/exercise'
@@ -131,14 +127,8 @@ function setsToRows(sets: WorkoutSetResponse[]): SetRow[] {
   }))
 }
 
-export function SetInputPage() {
-  const { workoutId, exerciseId } = useParams<{ workoutId: string; exerciseId: string }>()
-
-  const { data: records = [] } = useWorkoutRecordsByDay(workoutId ?? '')
-  const record = records.find((r) => r.exerciseId === exerciseId)
-
-  const { data: sets } = useWorkoutSets(record?.id ?? '')
-  const { data: exercise } = useExercise(exerciseId ?? '')
+export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string }) {
+  const { data: sets } = useWorkoutSets(workoutRecordId)
 
   const createSet = useCreateWorkoutSet()
   const updateSet = useUpdateWorkoutSet()
@@ -159,7 +149,7 @@ export function SetInputPage() {
   )
 
   async function handleAddSet() {
-    if (!record?.id) return
+    if (!workoutRecordId) return
     const id = generateId()
     const newRow: SetRow = { id, reps: 0, subReps: 0, weight: 0, isNew: true }
 
@@ -175,7 +165,7 @@ export function SetInputPage() {
     try {
       const row = rows[rows.length - 1]
       await createSet.mutateAsync({
-        workoutRecordId: record.id,
+        workoutRecordId,
         data: {
           id,
           reps: row?.reps ?? 0,
@@ -197,20 +187,20 @@ export function SetInputPage() {
   }
 
   async function handleBlurUpdate(id: string) {
-    if (!record?.id) return
+    if (!workoutRecordId) return
     const row = rows.find((r) => r.id === id)
     if (!row) return
     await updateSet.mutateAsync({
       id,
-      workoutRecordId: record.id,
+      workoutRecordId,
       data: { reps: row.reps, subReps: row.subReps, weight: row.weight },
     })
   }
 
   async function handleDelete(id: string) {
-    if (!record?.id) return
+    if (!workoutRecordId) return
     setRows((prev) => prev.filter((r) => r.id !== id))
-    await deleteSet.mutateAsync({ id, workoutRecordId: record.id })
+    await deleteSet.mutateAsync({ id, workoutRecordId })
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -227,47 +217,41 @@ export function SetInputPage() {
   const isPending = createSet.isPending || updateSet.isPending || deleteSet.isPending
 
   return (
-    <PageLayout title={exercise?.name ?? 'セット入力'}>
-      <div className="p-4 space-y-4">
-        {rows.length > 0 && (
-          <div className="text-sm text-content-secondary text-right">
-            総ボリューム: {totalVolume} kg
-          </div>
-        )}
+    <div className="space-y-3">
+      {rows.length > 0 && (
+        <div className="text-sm text-content-secondary text-right">
+          総ボリューム: {totalVolume} kg
+        </div>
+      )}
 
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-            {rows.map((row, i) => (
-              <div
-                key={row.id}
-                onBlur={() => void handleBlurUpdate(row.id)}
-              >
-                <SortableSetRow
-                  setRow={row}
-                  index={i}
-                  onUpdate={handleUpdateLocal}
-                  onDelete={(id) => void handleDelete(id)}
-                  isPending={isPending || pendingIds.has(row.id)}
-                />
-              </div>
-            ))}
-          </SortableContext>
-        </DndContext>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+          {rows.map((row, i) => (
+            <div
+              key={row.id}
+              onBlur={() => void handleBlurUpdate(row.id)}
+            >
+              <SortableSetRow
+                setRow={row}
+                index={i}
+                onUpdate={handleUpdateLocal}
+                onDelete={(id) => void handleDelete(id)}
+                isPending={isPending || pendingIds.has(row.id)}
+              />
+            </div>
+          ))}
+        </SortableContext>
+      </DndContext>
 
-        {rows.length === 0 && !record && (
-          <p className="text-center text-content-secondary text-sm py-4">
-            セットを追加してください
-          </p>
-        )}
-
-        <Button
-          onClick={() => void handleAddSet()}
-          disabled={!record?.id || createSet.isPending}
-          className="w-full"
-        >
-          ＋ セットを追加
-        </Button>
-      </div>
-    </PageLayout>
+      <Button
+        onClick={() => void handleAddSet()}
+        disabled={!workoutRecordId || createSet.isPending}
+        className="w-full"
+        variant="secondary"
+        size="sm"
+      >
+        ＋ セットを追加
+      </Button>
+    </div>
   )
 }
