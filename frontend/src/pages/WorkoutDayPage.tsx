@@ -6,6 +6,7 @@ import { useExercises } from '@/queries/useExercises'
 import { PageLayout } from '@/components/PageLayout'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
+import { ExerciseSetEditor } from '@/components/ExerciseSetEditor'
 import { formatDateJa, getDayOfWeekJa } from '@/lib/date'
 
 export function WorkoutDayPage() {
@@ -23,6 +24,17 @@ export function WorkoutDayPage() {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
+  // 折り畳まれた記録の id 集合。未収録＝展開（既定は全て展開）。
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+
+  function toggleCollapsed(recordId: string) {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(recordId)) next.delete(recordId)
+      else next.add(recordId)
+      return next
+    })
+  }
 
   function startEdit() {
     setTitle(day?.title ?? '')
@@ -127,15 +139,24 @@ export function WorkoutDayPage() {
 
         {records.map((record) => {
           const exercise = exercises.find((e) => e.id === record.exerciseId)
+          const isCollapsed = collapsed.has(record.id)
           return (
-            <div key={record.id} className="bg-surface-secondary rounded-xl p-4">
+            <div key={record.id} className="bg-surface-secondary rounded-xl p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <Link
-                  to={`/workout/${workoutId}/exercise/${record.exerciseId}`}
-                  className="font-bold text-content-inverse hover:opacity-80"
+                <button
+                  type="button"
+                  onClick={() => toggleCollapsed(record.id)}
+                  aria-expanded={!isCollapsed}
+                  className="flex items-center gap-2 font-bold text-content-inverse hover:opacity-80 text-left"
                 >
+                  <span
+                    aria-hidden
+                    className={`text-content-inverse/60 text-xs transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                  >
+                    ▶
+                  </span>
                   {exercise?.name ?? '種目不明'}
-                </Link>
+                </button>
                 <Button
                   variant="danger"
                   size="sm"
@@ -145,8 +166,13 @@ export function WorkoutDayPage() {
                   削除
                 </Button>
               </div>
-              {record.notes && (
-                <p className="text-sm text-content-inverse/60 mt-1">{record.notes}</p>
+              {!isCollapsed && (
+                <>
+                  {record.notes && (
+                    <p className="text-sm text-content-inverse/60">{record.notes}</p>
+                  )}
+                  <ExerciseSetEditor workoutRecordId={record.id} />
+                </>
               )}
             </div>
           )

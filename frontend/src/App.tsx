@@ -7,7 +7,6 @@ import { CalendarPage } from '@/pages/CalendarPage'
 import { ExercisesPage } from '@/pages/ExercisesPage'
 import { WorkoutDayPage } from '@/pages/WorkoutDayPage'
 import { ExerciseSelectPage } from '@/pages/ExerciseSelectPage'
-import { SetInputPage } from '@/pages/SetInputPage'
 
 export default function App() {
   return (
@@ -24,7 +23,6 @@ export default function App() {
           <Route path="/exercises" element={<ExercisesPage />} />
           <Route path="/workout/:workoutId" element={<WorkoutDayPage />} />
           <Route path="/workout/:workoutId/exercises" element={<ExerciseSelectPage />} />
-          <Route path="/workout/:workoutId/exercise/:exerciseId" element={<SetInputPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

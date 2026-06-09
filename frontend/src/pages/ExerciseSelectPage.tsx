@@ -18,12 +18,12 @@ export function ExerciseSelectPage() {
 
   async function handleSelect(exerciseId: string) {
     if (!workoutId) return
-    const record = await upsertRecord.mutateAsync({
+    await upsertRecord.mutateAsync({
       id: generateId(),
       workoutDayId: workoutId,
       exerciseId,
     })
-    navigate(`/workout/${workoutId}/exercise/${record.exerciseId}`)
+    navigate(`/workout/${workoutId}`)
   }
 
   return (
