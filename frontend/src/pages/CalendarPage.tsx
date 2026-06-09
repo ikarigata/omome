@@ -58,6 +58,13 @@ export function CalendarPage() {
     }
   }
 
+  function goToday() {
+    setYear(today.getFullYear())
+    setMonth(today.getMonth() + 1)
+  }
+
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth() + 1
+
   return (
     <PageLayout title="カレンダー">
       <div className="p-4 space-y-4">
@@ -78,6 +85,17 @@ export function CalendarPage() {
             翌月 ›
           </button>
         </div>
+
+        {!isCurrentMonth && (
+          <div className="flex justify-center">
+            <button
+              onClick={goToday}
+              className="px-3 py-1 rounded-lg bg-surface-container text-content-inverse text-xs"
+            >
+              今日に戻る
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-7 gap-px">
           {WEEKDAYS.map((d) => (
