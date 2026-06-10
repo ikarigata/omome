@@ -22,11 +22,19 @@ import { generateId } from '@/lib/uuid'
 import { calcVolume, calcRM } from '@/lib/exercise'
 import type { WorkoutSetResponse } from '@/api/types'
 
+// 入力欄の値は文字列で保持する。こうすることで「空」を表現でき、
+// ユーザーが 0 を消した状態をそのまま編集できる（数値型だと空 → 0 に戻ってしまう）。
 interface SetRow {
   id: string
-  reps: number
-  subReps: number
-  weight: number
+  reps: string
+  subReps: string
+  weight: string
+}
+
+// 入力文字列 → 数値（空・不正値は 0 とみなす）。計算・保存時に使う。
+function toNum(s: string): number {
+  const n = Number(s)
+  return s.trim() === '' || Number.isNaN(n) ? 0 : n
 }
 
 // 行ごとの保存状態。undefined = 保存済み（クリーン）。
@@ -44,7 +52,7 @@ function SortableSetRow({
   setRow: SetRow
   index: number
   status?: SaveStatus
-  onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: number) => void
+  onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: string) => void
   onDelete: (id: string) => void
   onRetry: (id: string) => void
   isPending: boolean
@@ -56,8 +64,8 @@ function SortableSetRow({
     transition,
   }
 
-  const volume = calcVolume(setRow.reps, setRow.subReps, setRow.weight)
-  const rm = calcRM(setRow.reps, setRow.weight)
+  const volume = calcVolume(toNum(setRow.reps), toNum(setRow.subReps), toNum(setRow.weight))
+  const rm = calcRM(toNum(setRow.reps), toNum(setRow.weight))
 
   return (
     <div ref={setNodeRef} style={style} className="bg-surface-container rounded-xl p-3 space-y-2">
@@ -78,7 +86,7 @@ function SortableSetRow({
               inputMode="numeric"
               min={0}
               value={setRow.reps}
-              onChange={(e) => onUpdate(setRow.id, 'reps', Number(e.target.value))}
+              onChange={(e) => onUpdate(setRow.id, 'reps', e.target.value)}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
             />
           </div>
@@ -89,7 +97,7 @@ function SortableSetRow({
               inputMode="numeric"
               min={0}
               value={setRow.subReps}
-              onChange={(e) => onUpdate(setRow.id, 'subReps', Number(e.target.value))}
+              onChange={(e) => onUpdate(setRow.id, 'subReps', e.target.value)}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
             />
           </div>
@@ -101,7 +109,7 @@ function SortableSetRow({
               min={0}
               step={0.5}
               value={setRow.weight}
-              onChange={(e) => onUpdate(setRow.id, 'weight', Number(e.target.value))}
+              onChange={(e) => onUpdate(setRow.id, 'weight', e.target.value)}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
             />
           </div>
@@ -140,9 +148,9 @@ function SortableSetRow({
 function setsToRows(sets: WorkoutSetResponse[]): SetRow[] {
   return sets.map((s) => ({
     id: s.id,
-    reps: s.reps,
-    subReps: s.subReps,
-    weight: s.weight,
+    reps: String(s.reps),
+    subReps: String(s.subReps),
+    weight: String(s.weight),
   }))
 }
 
@@ -195,15 +203,21 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
     if (!workoutRecordId) return
     const id = generateId()
     const last = rows[rows.length - 1]
-    const values = last
+    // 直前のセットがあれば値を引き継ぎ、無ければ空欄で開始（初期値 0 を出さない）。
+    const values: Pick<SetRow, 'reps' | 'subReps' | 'weight'> = last
       ? { reps: last.reps, subReps: last.subReps, weight: last.weight }
-      : { reps: 0, subReps: 0, weight: 0 }
+      : { reps: '', subReps: '', weight: '' }
 
     setRows((prev) => [...prev, { id, ...values }])
-    void save(id, () => createSet.mutateAsync({ workoutRecordId, data: { id, ...values } }))
+    void save(id, () =>
+      createSet.mutateAsync({
+        workoutRecordId,
+        data: { id, reps: toNum(values.reps), subReps: toNum(values.subReps), weight: toNum(values.weight) },
+      }),
+    )
   }
 
-  function handleUpdateLocal(id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: number) {
+  function handleUpdateLocal(id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: string) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
   }
 
@@ -214,10 +228,10 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
     // まだ作成が完了していない行は update せず作成（再試行）に任せる。
     const saved = sets?.find((s) => s.id === id)
     if (!saved) return
+    const data = { reps: toNum(row.reps), subReps: toNum(row.subReps), weight: toNum(row.weight) }
     // 値が変わっていなければ無駄な書き込みをしない。
-    if (saved.reps === row.reps && saved.subReps === row.subReps && saved.weight === row.weight) return
+    if (saved.reps === data.reps && saved.subReps === data.subReps && saved.weight === data.weight) return
 
-    const data = { reps: row.reps, subReps: row.subReps, weight: row.weight }
     void save(id, () => updateSet.mutateAsync({ id, workoutRecordId, data }))
   }
 
@@ -244,7 +258,7 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
     })
   }
 
-  const totalVolume = rows.reduce((sum, r) => sum + calcVolume(r.reps, r.subReps, r.weight), 0)
+  const totalVolume = rows.reduce((sum, r) => sum + calcVolume(toNum(r.reps), toNum(r.subReps), toNum(r.weight)), 0)
 
   return (
     <div className="space-y-3">

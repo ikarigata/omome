@@ -24,6 +24,20 @@ describe('ExerciseSetEditor 数値入力の inputMode', () => {
   })
 })
 
+describe('ExerciseSetEditor 数値入力のクリア', () => {
+  it('入力欄の値を消すと空のままになる（0 に戻らない）', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
+
+    const repsInput = (await screen.findAllByRole('spinbutton'))[0]!
+    expect(repsInput).toHaveValue(10)
+
+    await user.clear(repsInput)
+    // 空のまま保持され、0 へ巻き戻らない
+    expect(repsInput).toHaveValue(null)
+  })
+})
+
 describe('ExerciseSetEditor 保存失敗時の挙動（保持＋手動リトライ）', () => {
   it('保存に失敗しても入力値を保持し、自動リトライせず、再試行ボタンで復帰する', async () => {
     const user = userEvent.setup()
