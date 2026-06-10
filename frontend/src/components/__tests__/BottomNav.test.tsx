@@ -16,8 +16,8 @@ describe('BottomNav', () => {
   it('現在ルートのタブがアクティブ表示になる', () => {
     renderWithProviders(<BottomNav />, { initialEntries: ['/calendar'] })
     const calendarLink = screen.getByText('カレンダー').closest('a')
-    expect(calendarLink).toHaveClass('opacity-100')
+    expect(calendarLink).toHaveClass('text-content-accent')
     const homeLink = screen.getByText('ホーム').closest('a')
-    expect(homeLink).toHaveClass('opacity-60')
+    expect(homeLink).toHaveClass('text-navigation-text/60')
   })
 })
