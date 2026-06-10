@@ -22,7 +22,6 @@ export function WorkoutDayPage() {
   const deleteRecord = useDeleteWorkoutRecord()
 
   const [editing, setEditing] = useState(false)
-  const [title, setTitle] = useState('')
   const [notes, setNotes] = useState('')
   // 折り畳まれた記録の id 集合。未収録＝展開（既定は全て展開）。
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
@@ -37,14 +36,13 @@ export function WorkoutDayPage() {
   }
 
   function startEdit() {
-    setTitle(day?.title ?? '')
     setNotes(day?.notes ?? '')
     setEditing(true)
   }
 
   async function handleSave() {
     if (!workoutId) return
-    await updateDay.mutateAsync({ id: workoutId, data: { title: title || null, notes: notes || null } })
+    await updateDay.mutateAsync({ id: workoutId, data: { notes: notes || null } })
     setEditing(false)
   }
 
@@ -95,13 +93,6 @@ export function WorkoutDayPage() {
         {editing ? (
           <div className="bg-surface-secondary rounded-xl p-4 space-y-3">
             <Input
-              label="タイトル"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="胸の日"
-              className="text-content-inverse bg-surface-container"
-            />
-            <Input
               label="メモ"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -119,7 +110,6 @@ export function WorkoutDayPage() {
           </div>
         ) : (
           <>
-            {day.title && <h2 className="font-bold text-xl">{day.title}</h2>}
             {day.notes && <p className="text-sm text-content-secondary">{day.notes}</p>}
           </>
         )}
