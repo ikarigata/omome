@@ -1,6 +1,12 @@
 import { and, desc, eq, gte, lt } from 'drizzle-orm'
 import type { DB } from '../db/client.js'
-import { workoutDays, workoutRecords, exercises } from '../db/schema.js'
+import {
+  workoutDays,
+  workoutRecords,
+  exercises,
+  exerciseMuscleGroups,
+  muscleGroups,
+} from '../db/schema.js'
 import { isUniqueViolation } from '../middleware/error.js'
 
 export function createWorkoutDaysRepository(db: DB) {
@@ -11,6 +17,29 @@ export function createWorkoutDaysRepository(db: DB) {
         .from(workoutDays)
         .where(eq(workoutDays.userId, userId))
         .orderBy(desc(workoutDays.date))
+    },
+
+    // ユーザーの全トレーニング日について、実施種目のメイン部位名を返す。
+    // 日ごとの集約はサービス側で行う（record 作成順で並べ、重複排除する）。
+    async findPrimaryMuscleGroupsByUser(userId: string) {
+      return db
+        .select({
+          workoutDayId: workoutDays.id,
+          muscleGroupName: muscleGroups.name,
+        })
+        .from(workoutDays)
+        .innerJoin(workoutRecords, eq(workoutRecords.workoutDayId, workoutDays.id))
+        .innerJoin(exercises, eq(exercises.id, workoutRecords.exerciseId))
+        .innerJoin(
+          exerciseMuscleGroups,
+          and(
+            eq(exerciseMuscleGroups.exerciseId, exercises.id),
+            eq(exerciseMuscleGroups.isPrimary, true),
+          ),
+        )
+        .innerJoin(muscleGroups, eq(muscleGroups.id, exerciseMuscleGroups.muscleGroupId))
+        .where(eq(workoutDays.userId, userId))
+        .orderBy(workoutDays.id, workoutRecords.createdAt)
     },
 
     async findById(id: string) {
