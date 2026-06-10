@@ -109,7 +109,7 @@ function SortableSetRow({
         <span className="text-content-inverse/60 text-sm w-5">{index + 1}</span>
         <div className="flex-1 grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-content-inverse/50">重量 (kg)</label>
+            <label className="text-sm text-content-inverse/50">重量 (kg)</label>
             <input
               ref={(el) => {
                 weightRef.current = el
@@ -129,11 +129,11 @@ function SortableSetRow({
                   focusAndSelect(repsRef.current)
                 }
               }}
-              className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
+              className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-2 text-center text-base"
             />
           </div>
           <div>
-            <label className="text-xs text-content-inverse/50">レップ</label>
+            <label className="text-sm text-content-inverse/50">レップ</label>
             <input
               ref={repsRef}
               type="number"
@@ -149,23 +149,23 @@ function SortableSetRow({
                   onAdvance(setRow.id)
                 }
               }}
-              className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
+              className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-2 text-center text-base"
             />
           </div>
         </div>
         {/* 入力欄と高さ・角丸を揃えるため共有 Button は使わず、入力欄と同じ
-            rounded / py-1 / text-sm のプレーンボタンにする。 */}
+            rounded / py-2 / text-base のプレーンボタンにする。 */}
         <button
           type="button"
           aria-label="セットを削除"
           onClick={() => onDelete(setRow.id)}
           disabled={isPending}
-          className="shrink-0 bg-danger text-white rounded px-2 py-1 text-sm hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="shrink-0 bg-danger text-white rounded px-2 py-2 text-base hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           ✕
         </button>
       </div>
-      <div className="flex items-center gap-4 pl-8 text-xs text-content-inverse/50">
+      <div className="flex items-center gap-4 pl-8 text-sm text-content-inverse/50">
         <span>ボリューム: {volume} kg</span>
         <span>1RM推定: {rm} kg</span>
         {status === 'saving' && <span className="text-content-inverse/40">保存中…</span>}
