@@ -192,7 +192,7 @@ interface ExerciseUpsertRequest {
 UI側の都合で「メイン部位を取り出す」ヘルパ（先頭 or `isPrimary` で探す）を `lib/` に用意する。
 
 ### 5.2 セット
-スキーマに合わせ `reps` / `subReps` / `weight` を持つ。volume はDBに持たないため**フロントで算出**（バックエンド §4.5: `(reps + subReps) * weight`）。RM計算は subReps を除外（旧仕様踏襲、`rmCalculator` を移植）。
+スキーマに合わせ `reps` / `weight` を持つ。volume はDBに持たないため**フロントで算出**（バックエンド §4.5: `reps * weight`）。RM計算は Epley 式（旧仕様踏襲、`rmCalculator` を移植）。
 
 ### 5.3 日時
 UTC基準で受け取り、表示時にローカル整形。`workoutDays.date` は `YYYY-MM-DD` 文字列として扱う（バックエンド §4.3）。

@@ -50,7 +50,7 @@ infra/             Terraform（AWS + Neon コミュニティ Provider）。
 
 - ID は `uuid` 型で **DB の DEFAULT 生成を付けない**（必ず明示 INSERT。ID 欠落は NOT NULL 違反で顕在化）。例外は `users.id` で、これは cognito-trigger Lambda が生成する。
 - `updated_at` / `created_at` は **DB 管理**（BEFORE UPDATE トリガー + `DEFAULT now()`）。アプリ側で明示セットしない。タイムスタンプは `timestamptz`、全体を UTC 基準で統一。`workout_days.date` は `YYYY-MM-DD` の date 型。
-- `volume = (reps + sub_reps) * weight` は**保存しない**。必要時にアプリ側で算出する（統計は現状スコープ外）。
+- `volume = reps * weight` は**保存しない**。必要時にアプリ側で算出する（統計は現状スコープ外）。
 - 認証: SPA が Cognito と直接やり取りしてトークン取得。API Gateway の Cognito Authorizer が **アクセストークン**を Lambda 到達前に検証する。表示名の正は `users.name`（アプリ DB）であり、Cognito 属性ではない。フロントはプロフィールをトークンからではなく `GET /users/me` から取得する。
 - Neon は接続文字列を2系統使う: **pooled**（`-pooler`、`DATABASE_URL`）を Lambda 実行用、**direct**（`DIRECT_URL`）をマイグレーション用。
 - 統計、お気に入り（`isFavorite`）、テーマ切替 UI は明示的に**初期スコープ外**（将来追加）。ただしフロントのカラーシステム（セマンティックトークン + CSS変数）は今から用意し、テーマ追加が `[data-theme]` ブロックの追加だけで済むようにしておく。

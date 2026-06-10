@@ -15,7 +15,6 @@ function toResponse(row: NonNullable<SetRow>): WorkoutSetResponse {
     id: row.id,
     workoutRecordId: row.workoutRecordId,
     reps: row.reps,
-    subReps: row.subReps,
     weight: Number(row.weight),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -67,7 +66,6 @@ export function createWorkoutSetsService(deps: {
         id: data.id,
         workoutRecordId,
         reps: data.reps,
-        subReps: data.subReps,
         weight: data.weight,
       })
 

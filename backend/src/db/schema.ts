@@ -110,7 +110,6 @@ export const workoutSets = pgTable(
       .notNull()
       .references(() => workoutRecords.id, { onDelete: 'cascade' }),
     reps: integer('reps').notNull(),
-    subReps: integer('sub_reps').notNull().default(0),
     weight: numeric('weight').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),

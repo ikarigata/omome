@@ -160,24 +160,22 @@ CREATE INDEX idx_workout_records_exercise_id ON workout_records(exercise_id);
 -- workout_sets : トレーニングセット
 -- -----------------------------------------------------------------------------
 -- 1つの実績に紐づく個々のセット。重量とレップ数で構成される。
--- ボリューム = (reps + sub_reps) * weight は DB に持たず、将来の統計実装時に
+-- ボリューム = reps * weight は DB に持たず、将来の統計実装時に
 -- アプリ側で算出する。
 -- =============================================================================
 CREATE TABLE workout_sets (
     id                uuid        NOT NULL PRIMARY KEY,           -- ID（UUID。アプリ側で生成）
     workout_record_id uuid        NOT NULL,                       -- 実績ID（→ workout_records.id）
     reps              integer     NOT NULL,                       -- レップ数（挙上回数）
-    sub_reps          integer     NOT NULL DEFAULT 0,             -- 追加レップ数
     weight            numeric     NOT NULL,                       -- 重量(kg)
     -- volume（ボリューム）は DB に持たない。将来の統計実装時にアプリ側で
-    -- (reps + sub_reps) * weight として算出する。
+    -- reps * weight として算出する。
     created_at        timestamptz NOT NULL DEFAULT now(),         -- 作成日時（UTC）
     updated_at        timestamptz NOT NULL DEFAULT now(),         -- 更新日時（UTC）
 
     FOREIGN KEY (workout_record_id) REFERENCES workout_records(id) ON DELETE CASCADE,  -- 実績削除時にセットも削除
 
     CHECK (reps     >= 0),                                       -- レップ数は負数不可
-    CHECK (sub_reps >= 0),                                       -- 追加レップ数は負数不可
     CHECK (weight   >= 0)                                        -- 重量は負数不可
 );
 

@@ -8,10 +8,9 @@ import {
 const UUID = '11111111-1111-4111-8111-111111111111'
 
 describe('WorkoutSetCreateRequestSchema', () => {
-  it('正常系 → OK、subReps は既定 0', () => {
+  it('正常系 → OK', () => {
     const r = WorkoutSetCreateRequestSchema.safeParse({ id: UUID, reps: 10, weight: 60 })
     expect(r.success).toBe(true)
-    if (r.success) expect(r.data.subReps).toBe(0)
   })
 
   it('reps が負値 → エラー', () => {
@@ -21,11 +20,6 @@ describe('WorkoutSetCreateRequestSchema', () => {
 
   it('weight が負値 → エラー', () => {
     const r = WorkoutSetCreateRequestSchema.safeParse({ id: UUID, reps: 10, weight: -1 })
-    expect(r.success).toBe(false)
-  })
-
-  it('subReps が負値 → エラー', () => {
-    const r = WorkoutSetCreateRequestSchema.safeParse({ id: UUID, reps: 10, subReps: -1, weight: 60 })
     expect(r.success).toBe(false)
   })
 
@@ -61,7 +55,6 @@ describe('WorkoutSetResponseSchema', () => {
       id: UUID,
       workoutRecordId: UUID,
       reps: 10,
-      subReps: 2,
       weight: 60,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
