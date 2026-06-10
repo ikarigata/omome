@@ -58,8 +58,6 @@ export function HomePage() {
                 {formatDateJa(day.date)}（{getDayOfWeekJa(day.date)}）
               </span>
             </div>
-            {day.title && <p className="font-bold">{day.title}</p>}
-            {!day.title && <p className="font-bold text-content-inverse/40">タイトルなし</p>}
             {day.notes && <p className="text-sm text-content-inverse/60">{day.notes}</p>}
           </button>
         ))}
