@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams, Link } from 'react-router-dom'
+import { useNavigate, useParams, useLocation, Link } from 'react-router-dom'
 import { useWorkoutDay, useUpdateWorkoutDay, useDeleteWorkoutDay } from '@/queries/useWorkoutDays'
 import { useWorkoutRecordsByDay, useDeleteWorkoutRecord } from '@/queries/useWorkoutRecords'
 import { useExercises } from '@/queries/useExercises'
@@ -12,6 +12,9 @@ import { formatDateJa, getDayOfWeekJa } from '@/lib/date'
 export function WorkoutDayPage() {
   const { workoutId } = useParams<{ workoutId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  // 種目追加から戻ってきたときの対象記録 id（最初のセットを自動作成＆フォーカス）。
+  const focusRecordId = (location.state as { focusRecordId?: string } | null)?.focusRecordId
 
   const { data: day, isLoading: dayLoading } = useWorkoutDay(workoutId ?? '')
   const { data: records = [] } = useWorkoutRecordsByDay(workoutId ?? '')
@@ -168,7 +171,10 @@ export function WorkoutDayPage() {
                     {record.notes && (
                       <p className="text-sm text-content-inverse/60">{record.notes}</p>
                     )}
-                    <ExerciseSetEditor workoutRecordId={record.id} />
+                    <ExerciseSetEditor
+                      workoutRecordId={record.id}
+                      autoStart={record.id === focusRecordId}
+                    />
                   </div>
                 </div>
               </div>
