@@ -141,7 +141,7 @@ export function WorkoutDayPage() {
                 >
                   <span
                     aria-hidden
-                    className={`text-content-inverse/60 text-xs transition-transform duration-300 ease-in-out ${isCollapsed ? '' : 'rotate-90'}`}
+                    className={`text-content-inverse/60 text-xs transition-transform duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${isCollapsed ? '' : 'rotate-90'}`}
                   >
                     ▶
                   </span>
@@ -159,7 +159,7 @@ export function WorkoutDayPage() {
               {/* grid-template-rows を 0fr↔1fr で遷移させ、高さを滑らかに開閉する。
                   中身は常にマウントしたまま overflow-hidden でクリップする。 */}
               <div
-                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                className={`grid transition-[grid-template-rows] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
                   isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
                 }`}
               >
