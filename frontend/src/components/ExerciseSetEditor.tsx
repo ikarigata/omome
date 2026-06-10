@@ -68,7 +68,7 @@ function SortableSetRow({
 
   return (
     <div ref={setNodeRef} style={style} className="bg-surface-container rounded-xl p-3 space-y-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-end gap-2">
         <button
           {...attributes}
           {...listeners}
