@@ -59,6 +59,8 @@ function SortableSetRow({
   onUpdate,
   onDelete,
   onRetry,
+  onAdvance,
+  registerWeightRef,
   isPending,
 }: {
   setRow: SetRow
@@ -68,6 +70,10 @@ function SortableSetRow({
   onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'weight'>, value: string) => void
   onDelete: (id: string) => void
   onRetry: (id: string) => void
+  // 回数確定後、次セットの重量へ進む（無ければ新規セットを作る）。
+  onAdvance: (id: string) => void
+  // 重量入力の DOM を親に登録し、親から次セットへ同期的にフォーカスできるようにする。
+  registerWeightRef: (id: string, el: HTMLInputElement | null) => void
   isPending: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: setRow.id })
@@ -78,7 +84,8 @@ function SortableSetRow({
   }
 
   // 手数を減らすためのフォーカス制御。重量 → 回数の順に移動する。
-  const weightRef = useRef<HTMLInputElement>(null)
+  // weightRef は callback ref で代入するため mutable（| null）にする。
+  const weightRef = useRef<HTMLInputElement | null>(null)
   const repsRef = useRef<HTMLInputElement>(null)
 
   // 新規追加・種目追加直後はこの行の重量入力へ即フォーカス。
@@ -102,29 +109,12 @@ function SortableSetRow({
         <span className="text-content-inverse/60 text-sm w-5">{index + 1}</span>
         <div className="flex-1 grid grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-content-inverse/50">レップ</label>
-            <input
-              ref={repsRef}
-              type="number"
-              inputMode="numeric"
-              enterKeyHint="done"
-              min={0}
-              value={setRow.reps}
-              onChange={(e) => onUpdate(setRow.id, 'reps', e.target.value)}
-              onKeyDown={(e) => {
-                // 回数を確定（Enter/完了）したらフォーカスを外して保存（blur で発火）。
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  e.currentTarget.blur()
-                }
-              }}
-              className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
-            />
-          </div>
-          <div>
             <label className="text-xs text-content-inverse/50">重量 (kg)</label>
             <input
-              ref={weightRef}
+              ref={(el) => {
+                weightRef.current = el
+                registerWeightRef(setRow.id, el)
+              }}
               type="number"
               inputMode="decimal"
               enterKeyHint="next"
@@ -137,6 +127,26 @@ function SortableSetRow({
                 if (e.key === 'Enter') {
                   e.preventDefault()
                   focusAndSelect(repsRef.current)
+                }
+              }}
+              className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-content-inverse/50">レップ</label>
+            <input
+              ref={repsRef}
+              type="number"
+              inputMode="numeric"
+              enterKeyHint="next"
+              min={0}
+              value={setRow.reps}
+              onChange={(e) => onUpdate(setRow.id, 'reps', e.target.value)}
+              onKeyDown={(e) => {
+                // 回数を確定（Enter/次へ）したら次セットの重量へ進む（保存は blur で発火）。
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  onAdvance(setRow.id)
                 }
               }}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
@@ -202,6 +212,8 @@ export function ExerciseSetEditor({
   const [saveStatus, setSaveStatus] = useState<Record<string, SaveStatus>>({})
   // 追加直後にこの id の行の重量入力へフォーカスを当てる（手数削減）。
   const [focusWeightId, setFocusWeightId] = useState<string | null>(null)
+  // 各行の重量入力 DOM。回数確定後に次セットの重量へ同期的にフォーカスするのに使う。
+  const weightRefs = useRef<Map<string, HTMLInputElement | null>>(new Map())
   // 失敗した操作の再実行クロージャ（再試行ボタン用）。自動リトライはしない。
   const retryFns = useRef<Record<string, () => void>>({})
 
@@ -297,6 +309,19 @@ export function ExerciseSetEditor({
     retryFns.current[id]?.()
   }
 
+  // 回数確定後の遷移。次セットがあればその重量へ即フォーカス（キーボードを開いたまま）、
+  // 最終セットなら新規セットを作成してその重量へフォーカスする。
+  function handleAdvance(currentId: string) {
+    const idx = rows.findIndex((r) => r.id === currentId)
+    if (idx === -1) return
+    const next = rows[idx + 1]
+    if (next) {
+      focusAndSelect(weightRefs.current.get(next.id) ?? null)
+    } else {
+      handleAddSet()
+    }
+  }
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
     if (!over || active.id === over.id) return
@@ -332,6 +357,11 @@ export function ExerciseSetEditor({
                 onUpdate={handleUpdateLocal}
                 onDelete={handleDelete}
                 onRetry={handleRetry}
+                onAdvance={handleAdvance}
+                registerWeightRef={(id, el) => {
+                  if (el) weightRefs.current.set(id, el)
+                  else weightRefs.current.delete(id)
+                }}
                 isPending={saveStatus[row.id] === 'saving'}
               />
             </div>
