@@ -99,15 +99,17 @@ function SortableSetRow({
   return (
     <div ref={setNodeRef} style={style} className="bg-surface-container rounded-xl p-3 space-y-2">
       <div className="flex items-end gap-2">
+        {/* 左端のハンドル・番号は入力欄（py-2 + text-base ≒ h-10）と高さを揃え、
+            items-end で下端を合わせたうえで中央寄せし、入力欄の縦中心と一致させる。 */}
         <button
           {...attributes}
           {...listeners}
-          className="text-content-inverse/30 cursor-grab active:cursor-grabbing px-1"
+          className="text-content-inverse/30 cursor-grab active:cursor-grabbing px-1 h-10 flex items-center"
         >
           ⠿
         </button>
-        <span className="text-content-inverse/60 text-sm w-5">{index + 1}</span>
-        <div className="flex-1 grid grid-cols-2 gap-2">
+        <span className="text-content-inverse/60 text-sm w-5 h-10 flex items-center">{index + 1}</span>
+        <div className="flex-1 grid grid-cols-2 gap-4">
           <div>
             <label className="text-sm text-content-inverse/50">重量 (kg)</label>
             <input
