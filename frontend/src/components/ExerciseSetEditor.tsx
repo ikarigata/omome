@@ -282,7 +282,7 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
         onClick={handleAddSet}
         disabled={!workoutRecordId}
         className="w-full"
-        variant="secondary"
+        variant="primary"
         size="sm"
       >
         ＋ セットを追加
