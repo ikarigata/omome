@@ -1,20 +1,23 @@
 import { useState } from 'react'
-import { useNavigate, useParams, useLocation, Link } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useWorkoutDay, useUpdateWorkoutDay, useDeleteWorkoutDay } from '@/queries/useWorkoutDays'
-import { useWorkoutRecordsByDay, useDeleteWorkoutRecord } from '@/queries/useWorkoutRecords'
+import {
+  useWorkoutRecordsByDay,
+  useDeleteWorkoutRecord,
+  useUpsertWorkoutRecord,
+} from '@/queries/useWorkoutRecords'
 import { useExercises } from '@/queries/useExercises'
 import { PageLayout } from '@/components/PageLayout'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { ExerciseSetEditor } from '@/components/ExerciseSetEditor'
+import { ExerciseSelect } from '@/components/ExerciseSelect'
+import { generateId } from '@/lib/uuid'
 import { formatDateJa, getDayOfWeekJa } from '@/lib/date'
 
 export function WorkoutDayPage() {
   const { workoutId } = useParams<{ workoutId: string }>()
   const navigate = useNavigate()
-  const location = useLocation()
-  // 種目追加から戻ってきたときの対象記録 id（最初のセットを自動作成＆フォーカス）。
-  const focusRecordId = (location.state as { focusRecordId?: string } | null)?.focusRecordId
 
   const { data: day, isLoading: dayLoading } = useWorkoutDay(workoutId ?? '')
   const { data: records = [] } = useWorkoutRecordsByDay(workoutId ?? '')
@@ -23,11 +26,28 @@ export function WorkoutDayPage() {
   const updateDay = useUpdateWorkoutDay()
   const deleteDay = useDeleteWorkoutDay()
   const deleteRecord = useDeleteWorkoutRecord()
+  const upsertRecord = useUpsertWorkoutRecord()
 
   const [editing, setEditing] = useState(false)
   const [notes, setNotes] = useState('')
+  // 種目追加ドロップダウンの開閉。
+  const [adding, setAdding] = useState(false)
+  // 追加直後の記録 id（最初のセットを自動作成＆フォーカス）。
+  const [focusRecordId, setFocusRecordId] = useState<string | undefined>()
   // 折り畳まれた記録の id 集合。未収録＝展開（既定は全て展開）。
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+
+  // 既に記録済みの種目は選択肢から除く。
+  const recordedExerciseIds = new Set(records.map((r) => r.exerciseId))
+  const availableExercises = exercises.filter((e) => !recordedExerciseIds.has(e.id))
+
+  async function handleAddExercise(exerciseId: string) {
+    if (!workoutId) return
+    const id = generateId()
+    await upsertRecord.mutateAsync({ id, workoutDayId: workoutId, exerciseId })
+    setFocusRecordId(id)
+    setAdding(false)
+  }
 
   function toggleCollapsed(recordId: string) {
     setCollapsed((prev) => {
@@ -177,12 +197,22 @@ export function WorkoutDayPage() {
 
         {/* space-y-4 の 1rem に加え pt-4 で計 2rem、最後の種目との余白を広げる */}
         <div className="pt-4">
-          <Link
-            to={`/workout/${workoutId}/exercises`}
-            className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
-          >
-            ＋ 種目を追加
-          </Link>
+          {adding ? (
+            <ExerciseSelect
+              available={availableExercises}
+              onSelect={(exerciseId) => void handleAddExercise(exerciseId)}
+              onClose={() => setAdding(false)}
+              isPending={upsertRecord.isPending}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
+            >
+              ＋ 種目を追加
+            </button>
+          )}
         </div>
       </div>
     </PageLayout>
