@@ -24,8 +24,8 @@
   --color-interactive-primary: var(--color-accent);
   --color-interactive-hover:   200 74 22;
 
-  --color-navigation-bg:   var(--color-accent);
-  --color-navigation-text: var(--color-pure);
+  --color-navigation-bg:   var(--color-pure);
+  --color-navigation-text: var(--color-sub);
 
   --color-input-bg:          var(--color-container);
   --color-input-text:        var(--color-pure);

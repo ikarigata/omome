@@ -28,10 +28,10 @@ function DumbbellIcon() {
 
 export function BottomNav() {
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-col items-center gap-0.5 text-xs transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`
+    `flex flex-col items-center gap-0.5 text-xs transition-colors ${isActive ? 'text-content-accent' : 'text-navigation-text/60'}`
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 bg-navigation-bg text-navigation-text safe-area-bottom">
+    <nav className="fixed bottom-0 inset-x-0 bg-navigation-bg text-navigation-text border-t border-border-default safe-area-bottom">
       <div className="flex items-center justify-around h-16 px-2 max-w-md mx-auto">
         <NavLink to="/" end className={navLinkClass}>
           <HomeIcon />
