@@ -60,11 +60,11 @@ export function HomePage() {
             </div>
             {day.notes && <p className="text-sm text-content-inverse/60">{day.notes}</p>}
             {day.muscleGroups && day.muscleGroups.length > 0 && (
-              <div className="flex flex-wrap justify-end gap-1 pt-1">
+              <div className="flex flex-wrap justify-start gap-2 pt-1">
                 {day.muscleGroups.map((mg) => (
                   <span
                     key={mg}
-                    className="bg-surface-container text-content-inverse/80 text-xs rounded-md px-2 py-0.5"
+                    className="bg-surface-container text-content-inverse/80 text-sm rounded-md px-2.5 py-1"
                   >
                     {mg}
                   </span>
