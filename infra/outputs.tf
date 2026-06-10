@@ -33,6 +33,11 @@ output "lambda_app_function_name" {
   value       = aws_lambda_function.app.function_name
 }
 
+output "compute_region" {
+  description = "app Lambda + API Gateway を配置したリージョン（deploy.sh が aws cli の --region に使用）"
+  value       = var.compute_region
+}
+
 output "lambda_cognito_trigger_function_name" {
   description = "Post Confirmation トリガー Lambda 関数名（Phase 4 以降のデプロイで使用）"
   value       = aws_lambda_function.cognito_trigger.function_name

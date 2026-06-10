@@ -25,6 +25,8 @@ data "archive_file" "cognito_trigger_placeholder" {
 # アプリ本体 Lambda（ファット Lambda: 全 /api/v1 を Hono で処理）
 # ─────────────────────────────────────────────────────────────────
 resource "aws_lambda_function" "app" {
+  provider = aws.compute
+
   function_name = "${local.name_prefix}-app"
   role          = aws_iam_role.lambda.arn
   handler       = "index.handler"
@@ -51,6 +53,8 @@ resource "aws_lambda_function" "app" {
 
 # API Gateway → Lambda の呼び出し許可
 resource "aws_lambda_permission" "api_gateway" {
+  provider = aws.compute
+
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.app.function_name
