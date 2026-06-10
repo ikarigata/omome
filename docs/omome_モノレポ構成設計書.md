@@ -179,7 +179,7 @@ DTO は複数テーブルを JOIN・集約した「APIの形」であり、テ�
 | `muscleGroup.ts` | 部位マスタのレスポンス | 取得のみ（POSTなし。バックエンド §11-2） |
 | `workoutDay.ts` | トレーニング日の各DTO | `date` は `YYYY-MM-DD`。`id` は UUID |
 | `workoutRecord.ts` | 実績の各DTO | `id` は UUID。upsert 前提 |
-| `workoutSet.ts` | セットの各DTO | `reps>=0` / `subReps>=0` / `weight>=0`（スキーマCHECKと整合）。`id` は UUID |
+| `workoutSet.ts` | セットの各DTO | `reps>=0` / `weight>=0`（スキーマCHECKと整合）。`id` は UUID |
 | `user.ts` | プロフィール取得 / 更新 | 更新は `name` のみ・必須（空/未指定は不可。バックエンド §5.1） |
 | `calendar.ts` | カレンダー集約レスポンス | 案A（集約レスポンス）+ 月単位（バックエンド §6.4、フロント §8.4） |
 

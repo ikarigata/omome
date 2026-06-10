@@ -27,7 +27,6 @@ import type { WorkoutSetResponse } from '@/api/types'
 interface SetRow {
   id: string
   reps: string
-  subReps: string
   weight: string
 }
 
@@ -52,7 +51,7 @@ function SortableSetRow({
   setRow: SetRow
   index: number
   status?: SaveStatus
-  onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: string) => void
+  onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'weight'>, value: string) => void
   onDelete: (id: string) => void
   onRetry: (id: string) => void
   isPending: boolean
@@ -64,7 +63,7 @@ function SortableSetRow({
     transition,
   }
 
-  const volume = calcVolume(toNum(setRow.reps), toNum(setRow.subReps), toNum(setRow.weight))
+  const volume = calcVolume(toNum(setRow.reps), toNum(setRow.weight))
   const rm = calcRM(toNum(setRow.reps), toNum(setRow.weight))
 
   return (
@@ -78,7 +77,7 @@ function SortableSetRow({
           ⠿
         </button>
         <span className="text-content-inverse/60 text-sm w-5">{index + 1}</span>
-        <div className="flex-1 grid grid-cols-3 gap-2">
+        <div className="flex-1 grid grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-content-inverse/50">レップ</label>
             <input
@@ -87,17 +86,6 @@ function SortableSetRow({
               min={0}
               value={setRow.reps}
               onChange={(e) => onUpdate(setRow.id, 'reps', e.target.value)}
-              className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-content-inverse/50">追加レップ</label>
-            <input
-              type="number"
-              inputMode="numeric"
-              min={0}
-              value={setRow.subReps}
-              onChange={(e) => onUpdate(setRow.id, 'subReps', e.target.value)}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
             />
           </div>
@@ -149,7 +137,6 @@ function setsToRows(sets: WorkoutSetResponse[]): SetRow[] {
   return sets.map((s) => ({
     id: s.id,
     reps: String(s.reps),
-    subReps: String(s.subReps),
     weight: String(s.weight),
   }))
 }
@@ -204,20 +191,20 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
     const id = generateId()
     const last = rows[rows.length - 1]
     // 直前のセットがあれば値を引き継ぎ、無ければ空欄で開始（初期値 0 を出さない）。
-    const values: Pick<SetRow, 'reps' | 'subReps' | 'weight'> = last
-      ? { reps: last.reps, subReps: last.subReps, weight: last.weight }
-      : { reps: '', subReps: '', weight: '' }
+    const values: Pick<SetRow, 'reps' | 'weight'> = last
+      ? { reps: last.reps, weight: last.weight }
+      : { reps: '', weight: '' }
 
     setRows((prev) => [...prev, { id, ...values }])
     void save(id, () =>
       createSet.mutateAsync({
         workoutRecordId,
-        data: { id, reps: toNum(values.reps), subReps: toNum(values.subReps), weight: toNum(values.weight) },
+        data: { id, reps: toNum(values.reps), weight: toNum(values.weight) },
       }),
     )
   }
 
-  function handleUpdateLocal(id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: string) {
+  function handleUpdateLocal(id: string, field: keyof Pick<SetRow, 'reps' | 'weight'>, value: string) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
   }
 
@@ -228,9 +215,9 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
     // まだ作成が完了していない行は update せず作成（再試行）に任せる。
     const saved = sets?.find((s) => s.id === id)
     if (!saved) return
-    const data = { reps: toNum(row.reps), subReps: toNum(row.subReps), weight: toNum(row.weight) }
+    const data = { reps: toNum(row.reps), weight: toNum(row.weight) }
     // 値が変わっていなければ無駄な書き込みをしない。
-    if (saved.reps === data.reps && saved.subReps === data.subReps && saved.weight === data.weight) return
+    if (saved.reps === data.reps && saved.weight === data.weight) return
 
     void save(id, () => updateSet.mutateAsync({ id, workoutRecordId, data }))
   }
@@ -258,7 +245,7 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
     })
   }
 
-  const totalVolume = rows.reduce((sum, r) => sum + calcVolume(toNum(r.reps), toNum(r.subReps), toNum(r.weight)), 0)
+  const totalVolume = rows.reduce((sum, r) => sum + calcVolume(toNum(r.reps), toNum(r.weight)), 0)
 
   return (
     <div className="space-y-3">

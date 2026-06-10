@@ -18,7 +18,6 @@ export function createWorkoutSetsRepository(db: DB) {
       id: string
       workoutRecordId: string
       reps: number
-      subReps: number
       weight: number
     }) {
       try {
@@ -28,7 +27,6 @@ export function createWorkoutSetsRepository(db: DB) {
             id: data.id,
             workoutRecordId: data.workoutRecordId,
             reps: data.reps,
-            subReps: data.subReps,
             weight: String(data.weight),
           })
           .returning()
@@ -42,10 +40,9 @@ export function createWorkoutSetsRepository(db: DB) {
       }
     },
 
-    async update(id: string, data: { reps?: number; subReps?: number; weight?: number }) {
+    async update(id: string, data: { reps?: number; weight?: number }) {
       const updateData: Record<string, unknown> = {}
       if (data.reps !== undefined) updateData.reps = data.reps
-      if (data.subReps !== undefined) updateData.subReps = data.subReps
       if (data.weight !== undefined) updateData.weight = String(data.weight)
 
       const [row] = await db

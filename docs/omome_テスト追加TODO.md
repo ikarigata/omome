@@ -51,7 +51,7 @@ Hono は `app.request('/api/v1/...')` でハンドラを直接叩ける。認証
   - [x] 同一部位の重複 → エラー
   - [x] 空配列 → エラー
   - [x] `id` が UUID でない → エラー
-- [x] `workoutSet.ts`: `reps` / `subReps` / `weight` >= 0、負値はエラー、`id` は UUID
+- [x] `workoutSet.ts`: `reps` / `weight` >= 0、負値はエラー、`id` は UUID
 - [x] `workoutDay.ts`: `date` が `YYYY-MM-DD` 形式、不正形式はエラー
 - [x] `user.ts`: 更新は `name` のみ必須、空名はエラー
 - [x] `workoutRecord.ts`: 必須フィールド / UUID 検証
@@ -92,7 +92,7 @@ Hono は `app.request('/api/v1/...')` でハンドラを直接叩ける。認証
 - [x] **lib（純粋関数, インフラ不要・最優先）**
   - [x] `lib/uuid.ts`: `crypto.randomUUID()` ラッパの形式（クライアント生成UUID = 冪等性の前提）。getRandomValues フォールバックも検証
   - [x] `lib/date.ts`: 日付フォーマット / パース（`YYYY-MM-DD`、月日数・曜日）
-  - [x] `lib/exercise.ts`: メイン部位の取得、`calcVolume` / `calcRM`（RMは subReps 除外）
+  - [x] `lib/exercise.ts`: メイン部位の取得、`calcVolume`（reps * weight）/ `calcRM`（Epley 式）
   - [x] `lib/devFlags.ts`: `VITE_DEV_BYPASS_AUTH` のフラグ判定（`stubEnv` + `resetModules`）
 - [x] **queries（TanStack Query hooks, MSW でAPIモック）**
   - [x] `useExercises`（成功 / 500エラー）・`useMe`（取得 / 更新 invalidate）の挙動。他フックも同型のため代表をカバー

@@ -192,7 +192,6 @@ export const handlers = [
       id: body.id,
       workoutRecordId: String(params.workoutRecordId),
       reps: body.reps,
-      subReps: body.subReps ?? 0,
       weight: body.weight,
       createdAt: db.ts(),
       updatedAt: db.ts(),
@@ -208,7 +207,6 @@ export const handlers = [
     db.workoutSets[idx] = {
       ...cur,
       reps: body.reps ?? cur.reps,
-      subReps: body.subReps ?? cur.subReps,
       weight: body.weight ?? cur.weight,
       updatedAt: db.ts(),
     }

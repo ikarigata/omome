@@ -59,7 +59,7 @@
 
 ## 7. SetInputPage（`pages/SetInputPage.tsx`）
 
-- [ ] **数値入力に `inputMode` 指定がない**（P1相当・モバイル必須）。reps/subReps は `inputMode="numeric"`、weight は `inputMode="decimal"` を付け、モバイルで数字キーパッドが出るようにする。
+- [ ] **数値入力に `inputMode` 指定がない**（P1相当・モバイル必須）。reps は `inputMode="numeric"`、weight は `inputMode="decimal"` を付け、モバイルで数字キーパッドが出るようにする。
 - [ ] blur 保存の状態が見えない（P2）。保存中/保存済みのインジケータ（チェックマーク等）を行ごとに出す。
 - [ ] ヘッダーが種目名のみ（P2）。所属部位や前回同種目の記録（参考値）を出すと入力が速くなる。
 - [ ] ボリューム/1RM 表示が小さく副次的（P3）。レイアウトを見直し、必要なら主要数値を強調。

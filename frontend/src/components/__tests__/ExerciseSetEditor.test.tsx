@@ -11,16 +11,15 @@ const BASE = '/api/v1'
 const RECORD_ID = 'r0000000-0000-4000-8000-000000000001'
 
 describe('ExerciseSetEditor 数値入力の inputMode', () => {
-  it('reps / subReps は numeric、weight は decimal を持つ（モバイル数字キーパッド用）', async () => {
+  it('reps は numeric、weight は decimal を持つ（モバイル数字キーパッド用）', async () => {
     renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
     // セット行（type=number → role spinbutton）が描画されるのを待つ
-    await waitFor(() => expect(screen.getAllByRole('spinbutton').length).toBeGreaterThanOrEqual(3))
+    await waitFor(() => expect(screen.getAllByRole('spinbutton').length).toBeGreaterThanOrEqual(2))
 
     const inputs = screen.getAllByRole('spinbutton')
-    // 1行あたり [reps, subReps, weight] の順
+    // 1行あたり [reps, weight] の順
     expect(inputs[0]).toHaveAttribute('inputmode', 'numeric')
-    expect(inputs[1]).toHaveAttribute('inputmode', 'numeric')
-    expect(inputs[2]).toHaveAttribute('inputmode', 'decimal')
+    expect(inputs[1]).toHaveAttribute('inputmode', 'decimal')
   })
 })
 

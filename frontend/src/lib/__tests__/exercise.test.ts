@@ -32,9 +32,9 @@ describe('getPrimaryMuscleGroup', () => {
 })
 
 describe('calcVolume', () => {
-  it('(reps + subReps) * weight', () => {
-    expect(calcVolume(10, 2, 60)).toBe(720)
-    expect(calcVolume(0, 0, 60)).toBe(0)
+  it('reps * weight', () => {
+    expect(calcVolume(10, 60)).toBe(600)
+    expect(calcVolume(0, 60)).toBe(0)
   })
 })
 
@@ -45,7 +45,7 @@ describe('calcRM', () => {
   it('reps=1 は weight そのまま', () => {
     expect(calcRM(1, 100)).toBe(100)
   })
-  it('Epley 式（四捨五入）。subReps は含めない前提', () => {
+  it('Epley 式（四捨五入）', () => {
     // 100 * (1 + 10/30) = 133.33 → 133
     expect(calcRM(10, 100)).toBe(133)
   })

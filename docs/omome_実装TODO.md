@@ -54,7 +54,7 @@
 - [x] `schemas/muscleGroup.ts`（部位マスタのレスポンス。取得のみ・POSTなし）
 - [x] `schemas/workoutDay.ts`（`date` は `YYYY-MM-DD`、`id` は UUID）
 - [x] `schemas/workoutRecord.ts`（`id` は UUID、upsert 前提）
-- [x] `schemas/workoutSet.ts`（`reps`/`subReps`/`weight` >= 0、`id` は UUID）
+- [x] `schemas/workoutSet.ts`（`reps`/`weight` >= 0、`id` は UUID）
 - [x] `schemas/user.ts`（プロフィール取得 / 更新。更新は `name` のみ・必須）
 - [x] `schemas/calendar.ts`（案A 集約レスポンス + 月単位）
 - [x] `types.ts`（`z.infer` で導出した DTO 型の再エクスポート）
@@ -145,7 +145,7 @@
 - [x] 種目管理（`/exercises`。部位配列・メイン1件指定のバリデーション）
 - [x] 日詳細（`/workout/:workoutId`）
 - [x] 種目選択（`/workout/:workoutId/exercises`。記録済み種目は除外）
-- [x] セット入力（`/workout/:workoutId/exercise/:exerciseId`。@dnd-kit 並べ替え、volume フロント算出、RM計算は subReps 除外）
+- [x] セット入力（`/workout/:workoutId/exercise/:exerciseId`。@dnd-kit 並べ替え、volume フロント算出（reps * weight）、RM計算は Epley 式）
 - [x] ボトムナビ（**統計アイコンは外す**。ホーム/カレンダー/＋/種目管理）
 - [ ] ~~統計（`/statistics`）~~（**今回スコープ外。将来追加**）
 

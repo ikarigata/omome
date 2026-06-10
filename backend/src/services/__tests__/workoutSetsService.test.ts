@@ -37,7 +37,6 @@ function fakeSet() {
     id: 'set-1',
     workoutRecordId: 'rec-1',
     reps: 10,
-    subReps: 0,
     weight: '60',
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
@@ -52,7 +51,7 @@ function setup() {
   return { workoutSetsRepo, workoutRecordsRepo, workoutDaysRepo, service }
 }
 
-const createData = { id: 'set-1', reps: 10, subReps: 0, weight: 60 }
+const createData = { id: 'set-1', reps: 10, weight: 60 }
 
 describe('workoutSetsService — record→day→user の所有権', () => {
   beforeEach(() => vi.clearAllMocks())

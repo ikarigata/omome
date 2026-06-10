@@ -166,9 +166,9 @@ workout_records (1) ──< (N) workout_sets
 - INSERT 時の created_at / updated_at も DB の DEFAULT `now()` に任せる（アプリ側で明示セットしない）。
 
 ### 4.5 volume（ボリューム）
-- volume（`(reps + sub_reps) * weight`）は **DB に持たない**（生成列は廃止）。将来の統計実装時に**アプリ側で算出**する。
+- volume（`reps * weight`）は **DB に持たない**（生成列は廃止）。将来の統計実装時に**アプリ側で算出**する。
 - スキーマ上 `workout_sets` に volume 列は存在しない。INSERT/UPDATE で volume を扱わない。
-- 統計（§6.3）は今回スコープ外（将来追加）。実装する際の計算式は `(reps + sub_reps) * weight` に統一する。
+- 統計（§6.3）は今回スコープ外（将来追加）。実装する際の計算式は `reps * weight` に統一する。
 
 ### 4.6 exercises × muscle_groups（中間テーブル）
 - 多対多。`exercise_muscle_groups.is_primary` でメイン/サブを区別。メイン部位は部分ユニークインデックスにより1種目1つまで。
@@ -252,10 +252,10 @@ workout_records (1) ──< (N) workout_sets
 - 配列の規約:
   - **メイン部位（isPrimary=true）は必ず1件**。スキーマの部分ユニークインデックス（メインは1種目1つまで）と整合。
   - **ソート順はメイン部位を先頭**にする（フロントが「メインを取り出す」際に困らないため）。残りのサブ部位の順序は任意（必要なら名称順等を別途定義）。
-- 進捗レスポンス（statistics/progress）は **今回スコープ外（将来追加）**。実装する際は、日別の `ProgressData`（date / totalVolume / maxWeight / sets[]）と集計値（maxWeight / totalSets / totalReps）を返す構造とし、volume は `(reps + sub_reps) * weight` で算出する。仕様の詳細は将来追加時に確定する。
+- 進捗レスポンス（statistics/progress）は **今回スコープ外（将来追加）**。実装する際は、日別の `ProgressData`（date / totalVolume / maxWeight / sets[]）と集計値（maxWeight / totalSets / totalReps）を返す構造とし、volume は `reps * weight` で算出する。仕様の詳細は将来追加時に確定する。
 
 ### 5.3 入力バリデーション
-- `reps >= 0` / `sub_reps >= 0` / `weight >= 0`（スキーマCHECKと整合）。
+- `reps >= 0` / `weight >= 0`（スキーマCHECKと整合）。
 - `is_primary` は 0/1。
 - 必須項目欠落は 400。
 - **種目の作成/更新リクエストも部位を配列で受ける**（レスポンスと対称にする）。リクエスト例:
@@ -294,7 +294,7 @@ workout_records (1) ──< (N) workout_sets
 
 ### 6.3 進捗統計（statistics/progress）※将来追加
 - **今回スコープ外**。将来追加時に実装する。
-- 実装する際は、対象種目の workout_sets を日付順に集約し、日別ボリューム・最大重量・セット内訳を返す。volume は `(reps + sub_reps) * weight` で算出する。
+- 実装する際は、対象種目の workout_sets を日付順に集約し、日別ボリューム・最大重量・セット内訳を返す。volume は `reps * weight` で算出する。
 - 日別集計のキーや絞り込み期間などの詳細仕様は、将来追加時に確定する。
 
 ### 6.4 カレンダー（workout-days/calendar）→ 確定
@@ -444,7 +444,7 @@ omome/
 1. ~~**users と Cognito の対応づけ**~~ → **確定済み**: `users.id`=アプリ生成UUID、`cognito_sub` 列を別持ち（UNIQUE）。`sub`→`users.id` は毎リクエスト解決（共通ミドルウェアに集約）。`password_hash` は削除、`email` はDBにも保持（nullable）、行作成は **Post Confirmation トリガー**（§3.2 / §3.3 / §3.4 / §4.1）。
 2. **muscle-groups エンドポイント** → **確定済み**: muscle-groups は固定マスタのため**取得のみのAPI**（GET 一覧 / GET 単体）とし、POST（作成）は設けない。マスタデータはマイグレーションで固定投入（§6・§12-1）。／ **users エンドポイントは `GET /users/me`・`PUT /users/me`（編集は name のみ）で確定**（§5.1）。
 3. ~~**exercises の部位レスポンス仕様**~~ → **確定済み**: 部位は**配列（リスト）で返す**。メイン部位は先頭・ちょうど1件。リクエストも配列で受ける。**部位が空の種目は禁止（最低1件＝メイン必須）**（§5.2 / §5.3 / §6.1）。
-4. ~~**volume 計算式の統一**~~ → **確定済み**: volume は **DB に持たない**（生成列廃止）。将来の統計実装時にアプリ側で `(reps + sub_reps) * weight` として算出（§4.5 / §6.3）。
+4. ~~**volume 計算式の統一**~~ → **確定済み**: volume は **DB に持たない**（生成列廃止）。将来の統計実装時にアプリ側で `reps * weight` として算出（§4.5 / §6.3）。
 5. ~~**updated_at の方式**~~ → **確定済み**: **DB の BEFORE UPDATE トリガー任せに一本化**。アプリ側では明示セットしない（§4.4）。
 6. **API 公開形態**（§9.3） → **確定済み**: CloudFront 配下 `/api/*` 集約（同一ドメイン化で CORS を単純化）。
 7. **マイグレーションツール**（§7.3） → **確定済み**: Drizzle Kit を採用。
@@ -461,7 +461,7 @@ omome/
 - users 行は Post Confirmation トリガーで作成（§3.4）。
 
 ### 12-2. volume 計算式・updated_at 方式 → 確定済み
-- volume: DB に持たず、将来の統計実装時にアプリ側で `(reps + sub_reps) * weight` 算出（§4.5）。
+- volume: DB に持たず、将来の統計実装時にアプリ側で `reps * weight` 算出（§4.5）。
 - updated_at: DB の BEFORE UPDATE トリガー任せに一本化（§4.4）。
 
 ### 12-3. users.email の扱い（nullable 化）→ 確定済み
