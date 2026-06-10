@@ -7,7 +7,7 @@ import { generateId } from '@/lib/uuid'
 
 function PlusIcon() {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-8">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="size-12">
       <path fillRule="evenodd" d="M12 3.75a.75.75 0 0 1 .75.75v6.75h6.75a.75.75 0 0 1 0 1.5h-6.75v6.75a.75.75 0 0 1-1.5 0v-6.75H4.5a.75.75 0 0 1 0-1.5h6.75V4.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
     </svg>
   )
@@ -69,7 +69,7 @@ export function HomePage() {
             onClick={() => void handlePlusClick()}
             disabled={createDay.isPending}
             aria-label="今日のトレーニングを追加"
-            className="pointer-events-auto flex items-center justify-center size-14 rounded-full bg-interactive-primary text-content-inverse shadow-lg hover:bg-interactive-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="pointer-events-auto flex items-center justify-center size-[5.25rem] rounded-2xl bg-interactive-primary text-content-inverse shadow-lg hover:bg-interactive-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <PlusIcon />
           </button>
