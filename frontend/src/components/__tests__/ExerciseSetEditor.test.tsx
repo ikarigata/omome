@@ -17,9 +17,9 @@ describe('ExerciseSetEditor 数値入力の inputMode', () => {
     await waitFor(() => expect(screen.getAllByRole('spinbutton').length).toBeGreaterThanOrEqual(2))
 
     const inputs = screen.getAllByRole('spinbutton')
-    // 1行あたり [reps, weight] の順
-    expect(inputs[0]).toHaveAttribute('inputmode', 'numeric')
-    expect(inputs[1]).toHaveAttribute('inputmode', 'decimal')
+    // 1行あたり [weight, reps] の順（左=重量 / 右=回数）
+    expect(inputs[0]).toHaveAttribute('inputmode', 'decimal')
+    expect(inputs[1]).toHaveAttribute('inputmode', 'numeric')
   })
 })
 
@@ -28,7 +28,8 @@ describe('ExerciseSetEditor 数値入力のクリア', () => {
     const user = userEvent.setup()
     renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
 
-    const repsInput = (await screen.findAllByRole('spinbutton'))[0]!
+    // 並びは [weight, reps] なので回数入力は 2 番目。
+    const repsInput = (await screen.findAllByRole('spinbutton'))[1]!
     expect(repsInput).toHaveValue(10)
 
     await user.clear(repsInput)
@@ -38,6 +39,7 @@ describe('ExerciseSetEditor 数値入力のクリア', () => {
 })
 
 describe('ExerciseSetEditor フォーカス遷移（タップ手数の削減）', () => {
+  // 1 行 = [weight, reps] の並び。新規行の重量は末尾から 2 番目。
   it('セット追加直後は新しい行の重量入力へフォーカスが当たる', async () => {
     const user = userEvent.setup()
     renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
@@ -46,11 +48,10 @@ describe('ExerciseSetEditor フォーカス遷移（タップ手数の削減）'
 
     await user.click(screen.getByRole('button', { name: /セットを追加/ }))
 
-    // 1行 = [reps, weight]。追加後の最終行（=最後の spinbutton）が重量入力。
     await waitFor(() => {
       const inputs = screen.getAllByRole('spinbutton')
       expect(inputs).toHaveLength(before + 2)
-      expect(document.activeElement).toBe(inputs[inputs.length - 1])
+      expect(document.activeElement).toBe(inputs[inputs.length - 2]) // 新規行の重量
     })
   })
 
@@ -59,12 +60,42 @@ describe('ExerciseSetEditor フォーカス遷移（タップ手数の削減）'
     renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
     await waitFor(() => expect(screen.getAllByRole('spinbutton').length).toBeGreaterThanOrEqual(2))
 
-    // 1 行目の [reps, weight]。重量で Enter → 回数へ移る。
-    const [reps, weight] = screen.getAllByRole('spinbutton')
+    // 1 行目は [weight, reps]。重量で Enter → 同じ行の回数へ。
+    const [weight, reps] = screen.getAllByRole('spinbutton')
     await user.click(weight!)
     await user.keyboard('60{Enter}')
 
     expect(document.activeElement).toBe(reps)
+  })
+
+  it('回数入力で Enter を押すと次セットの重量へフォーカスが移る', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
+    await waitFor(() => expect(screen.getAllByRole('spinbutton').length).toBeGreaterThanOrEqual(4))
+
+    // [w0, r0, w1, r1, ...]。1 行目の回数(r0)で Enter → 2 行目の重量(w1)へ。
+    const inputs = screen.getAllByRole('spinbutton')
+    await user.click(inputs[1]!) // r0
+    await user.keyboard('{Enter}')
+
+    expect(document.activeElement).toBe(inputs[2]) // w1
+  })
+
+  it('最終セットの回数で Enter を押すと新規セットを作成し重量へフォーカスする', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
+    await waitFor(() => expect(screen.getAllByRole('spinbutton').length).toBeGreaterThanOrEqual(2))
+    const before = screen.getAllByRole('spinbutton').length
+
+    // 末尾の入力 = 最終セットの回数。Enter で新規セット作成。
+    await user.click(screen.getAllByRole('spinbutton')[before - 1]!)
+    await user.keyboard('{Enter}')
+
+    await waitFor(() => {
+      const inputs = screen.getAllByRole('spinbutton')
+      expect(inputs).toHaveLength(before + 2)
+      expect(document.activeElement).toBe(inputs[inputs.length - 2]) // 新規行の重量
+    })
   })
 
   it('autoStart 指定でセットが無ければ 1 セット自動作成し重量へフォーカスする', async () => {
@@ -74,7 +105,7 @@ describe('ExerciseSetEditor フォーカス遷移（タップ手数の削減）'
     await waitFor(() => {
       const inputs = screen.getAllByRole('spinbutton')
       expect(inputs).toHaveLength(2)
-      expect(document.activeElement).toBe(inputs[1]) // 重量
+      expect(document.activeElement).toBe(inputs[0]) // [weight, reps] の重量
     })
   })
 })
@@ -84,7 +115,8 @@ describe('ExerciseSetEditor 保存失敗時の挙動（保持＋手動リトラ�
     const user = userEvent.setup()
     renderWithProviders(<ExerciseSetEditor workoutRecordId={RECORD_ID} />)
 
-    const repsInput = (await screen.findAllByRole('spinbutton'))[0]!
+    // 並びは [weight, reps] なので回数入力は 2 番目。
+    const repsInput = (await screen.findAllByRole('spinbutton'))[1]!
 
     // 次の PUT を 1 回失敗させる
     server.use(http.put(`${BASE}/workout-sets/:id`, () => new HttpResponse(null, { status: 500 })))
