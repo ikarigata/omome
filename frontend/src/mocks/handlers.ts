@@ -100,7 +100,19 @@ export const handlers = [
   }),
 
   // ── workout-days ──
-  http.get(`${BASE}/workout-days`, () => HttpResponse.json(db.workoutDays)),
+  // 一覧では各日の実施種目のメイン部位名を集約して付与する（バックエンドと同形）。
+  http.get(`${BASE}/workout-days`, () => {
+    const withMuscleGroups = db.workoutDays.map((d) => {
+      const names: string[] = []
+      for (const r of db.workoutRecords.filter((r) => r.workoutDayId === d.id)) {
+        const ex = db.exercises.find((e) => e.id === r.exerciseId)
+        const primary = ex?.muscleGroups.find((g) => g.isPrimary)?.name
+        if (primary && !names.includes(primary)) names.push(primary)
+      }
+      return { ...d, muscleGroups: names }
+    })
+    return HttpResponse.json(withMuscleGroups)
+  }),
   http.post(`${BASE}/workout-days`, async ({ request }) => {
     const body = (await request.json()) as WorkoutDayCreateRequest
     const existing = db.workoutDays.find((d) => d.id === body.id)

@@ -26,7 +26,17 @@ export function createWorkoutDaysService(deps: { workoutDaysRepo: WorkoutDaysRep
   return {
     async getAll(userId: string): Promise<WorkoutDayResponse[]> {
       const rows = await workoutDaysRepo.findAllByUser(userId)
-      return rows.map(toResponse)
+      const mgRows = await workoutDaysRepo.findPrimaryMuscleGroupsByUser(userId)
+
+      // 日ごとにメイン部位名を集約（record 作成順を保ちつつ重複排除）。
+      const byDay = new Map<string, string[]>()
+      for (const { workoutDayId, muscleGroupName } of mgRows) {
+        const names = byDay.get(workoutDayId) ?? []
+        if (!names.includes(muscleGroupName)) names.push(muscleGroupName)
+        byDay.set(workoutDayId, names)
+      }
+
+      return rows.map((row) => ({ ...toResponse(row), muscleGroups: byDay.get(row.id) ?? [] }))
     },
 
     async getById(userId: string, id: string): Promise<WorkoutDayResponse> {

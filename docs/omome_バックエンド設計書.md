@@ -202,7 +202,7 @@ workout_records (1) ──< (N) workout_sets
 | POST | `/` | 部位作成（マスタ管理用途。要否は §11-2） |
 
 **workout-days** `/api/v1/workout-days`
-| GET | `/` | トレーニング日一覧 |
+| GET | `/` | トレーニング日一覧（各日に実施種目のメイン部位名 `muscleGroups: string[]` を集約付与。ホームの部位チップ表示用。記録順・重複排除。記録ゼロの日は空配列） |
 | GET | `/{id}` | 取得 |
 | POST | `/` | 作成 |
 | PUT | `/{id}` | 更新 |

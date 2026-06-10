@@ -5,6 +5,9 @@ export const WorkoutDayResponseSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
   title: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  // その日に実施した種目のメイン部位名（重複排除済み）。一覧の集約結果で、
+  // 詳細取得など含まれない場合もあるため optional。
+  muscleGroups: z.array(z.string()).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
