@@ -210,7 +210,16 @@ export function ExerciseSetEditor({
   const updateSet = useUpdateWorkoutSet()
   const deleteSet = useDeleteWorkoutSet()
 
-  const [rows, setRows] = useState<SetRow[]>([])
+  // サーバ値はマウント時の初期種付けにだけ使う。以降はローカル rows が真実。
+  // ページ側で sets を先読み済みなら、初期描画から実データで埋まりポップインしない。
+  const seeded = useRef(false)
+  const [rows, setRows] = useState<SetRow[]>(() => {
+    if (sets) {
+      seeded.current = true
+      return setsToRows(sets)
+    }
+    return []
+  })
   const [saveStatus, setSaveStatus] = useState<Record<string, SaveStatus>>({})
   // 追加直後にこの id の行の重量入力へフォーカスを当てる（手数削減）。
   const [focusWeightId, setFocusWeightId] = useState<string | null>(null)
@@ -219,9 +228,8 @@ export function ExerciseSetEditor({
   // 失敗した操作の再実行クロージャ（再試行ボタン用）。自動リトライはしない。
   const retryFns = useRef<Record<string, () => void>>({})
 
-  // サーバ値はマウント時の初期種付けにだけ使う。以降はローカル rows が真実なので
-  // 上書き同期しない（編集中の値が保存完了の再描画で巻き戻るのを防ぐ）。
-  const seeded = useRef(false)
+  // 先読みが間に合わず後から sets が届いた場合（新規レコード等）の保険で種付けする。
+  // 種付け済みなら何もしない（編集中の値が保存完了の再描画で巻き戻るのを防ぐ）。
   useEffect(() => {
     if (!seeded.current && sets) {
       setRows(setsToRows(sets))

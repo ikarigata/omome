@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { useQueries } from '@tanstack/react-query'
 import { useWorkoutDay, useUpdateWorkoutDay, useDeleteWorkoutDay } from '@/queries/useWorkoutDays'
 import {
   useWorkoutRecordsByDay,
   useDeleteWorkoutRecord,
   useUpsertWorkoutRecord,
 } from '@/queries/useWorkoutRecords'
+import { workoutSetsQueryOptions } from '@/queries/useWorkoutSets'
 import { useExercises } from '@/queries/useExercises'
 import { PageLayout } from '@/components/PageLayout'
 import { Button } from '@/components/Button'
@@ -20,8 +22,14 @@ export function WorkoutDayPage() {
   const navigate = useNavigate()
 
   const { data: day, isLoading: dayLoading } = useWorkoutDay(workoutId ?? '')
-  const { data: records = [] } = useWorkoutRecordsByDay(workoutId ?? '')
+  const { data: records = [], isSuccess: recordsLoaded } = useWorkoutRecordsByDay(workoutId ?? '')
   const { data: exercises = [] } = useExercises()
+
+  // 各種目の sets をページ側で並行に先読みする。エディタを1つずつ展開させて
+  // カクつかせないよう、全部揃ってから一斉に描画する（下の recordsReady で制御）。
+  const setQueries = useQueries({
+    queries: records.map((r) => workoutSetsQueryOptions(r.id)),
+  })
 
   const updateDay = useUpdateWorkoutDay()
   const deleteDay = useDeleteWorkoutDay()
@@ -36,6 +44,14 @@ export function WorkoutDayPage() {
   const [focusRecordId, setFocusRecordId] = useState<string | undefined>()
   // 折り畳まれた記録の id 集合。未収録＝展開（既定は全て展開）。
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+
+  // 初回表示で「全 sets が揃うまで種目カードを描画しない」ためのラッチ。
+  // 一度 true になったら戻さない（種目追加で新クエリが pending になっても一覧を消さない）。
+  const [recordsReady, setRecordsReady] = useState(false)
+  const allSetsLoaded = recordsLoaded && setQueries.every((q) => q.isSuccess)
+  useEffect(() => {
+    if (allSetsLoaded) setRecordsReady(true)
+  }, [allSetsLoaded])
 
   // 既に記録済みの種目は選択肢から除く。
   const recordedExerciseIds = new Set(records.map((r) => r.exerciseId))
@@ -137,13 +153,17 @@ export function WorkoutDayPage() {
           </>
         )}
 
-        {records.length === 0 && (
-          <p className="text-center text-content-secondary text-sm py-4">
-            まだ記録がありません
-          </p>
-        )}
+        {!recordsReady ? (
+          <p className="text-center text-content-secondary text-sm py-8">読み込み中…</p>
+        ) : (
+          <>
+            {records.length === 0 && (
+              <p className="text-center text-content-secondary text-sm py-4">
+                まだ記録がありません
+              </p>
+            )}
 
-        {records.map((record) => {
+            {records.map((record) => {
           const exercise = exercises.find((e) => e.id === record.exerciseId)
           const isCollapsed = collapsed.has(record.id)
           return (
@@ -195,25 +215,27 @@ export function WorkoutDayPage() {
           )
         })}
 
-        {/* space-y-4 の 1rem に加え pt-4 で計 2rem、最後の種目との余白を広げる */}
-        <div className="pt-4">
-          {adding ? (
-            <ExerciseSelect
-              available={availableExercises}
-              onSelect={(exerciseId) => void handleAddExercise(exerciseId)}
-              onClose={() => setAdding(false)}
-              isPending={upsertRecord.isPending}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setAdding(true)}
-              className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
-            >
-              ＋ 種目を追加
-            </button>
-          )}
-        </div>
+            {/* space-y-4 の 1rem に加え pt-4 で計 2rem、最後の種目との余白を広げる */}
+            <div className="pt-4">
+              {adding ? (
+                <ExerciseSelect
+                  available={availableExercises}
+                  onSelect={(exerciseId) => void handleAddExercise(exerciseId)}
+                  onClose={() => setAdding(false)}
+                  isPending={upsertRecord.isPending}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAdding(true)}
+                  className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
+                >
+                  ＋ 種目を追加
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </PageLayout>
   )

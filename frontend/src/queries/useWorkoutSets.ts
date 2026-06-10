@@ -3,12 +3,20 @@ import { workoutSetsApi } from '@/api/resources/workoutSets'
 import type { WorkoutSetCreateRequest, WorkoutSetResponse, WorkoutSetUpdateRequest } from '@/api/types'
 import { queryKeys } from './queryKeys'
 
-export function useWorkoutSets(workoutRecordId: string) {
-  return useQuery({
+// useWorkoutSets と、ページ側でまとめて先読みする useQueries の双方で同じ設定を使う。
+// staleTime を持たせることで、先読み済みのキャッシュをエディタがマウントしても
+// 再フェッチしない（書き込みは setQueryData でキャッシュを直接更新するため再取得不要）。
+export function workoutSetsQueryOptions(workoutRecordId: string) {
+  return {
     queryKey: queryKeys.workoutRecords.sets(workoutRecordId),
     queryFn: () => workoutSetsApi.listByRecord(workoutRecordId),
     enabled: !!workoutRecordId,
-  })
+    staleTime: 60_000,
+  }
+}
+
+export function useWorkoutSets(workoutRecordId: string) {
+  return useQuery(workoutSetsQueryOptions(workoutRecordId))
 }
 
 // 書き込み後は再フェッチせず、返ってきた行でキャッシュを直接更新する（越境往復を増やさない）。
