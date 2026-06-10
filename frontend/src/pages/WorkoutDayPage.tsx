@@ -175,12 +175,15 @@ export function WorkoutDayPage() {
           )
         })}
 
-        <Link
-          to={`/workout/${workoutId}/exercises`}
-          className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
-        >
-          ＋ 種目を追加
-        </Link>
+        {/* space-y-4 の 1rem に加え pt-4 で計 2rem、最後の種目との余白を広げる */}
+        <div className="pt-4">
+          <Link
+            to={`/workout/${workoutId}/exercises`}
+            className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
+          >
+            ＋ 種目を追加
+          </Link>
+        </div>
       </div>
     </PageLayout>
   )
