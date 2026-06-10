@@ -1,4 +1,6 @@
 resource "aws_apigatewayv2_api" "main" {
+  provider = aws.compute
+
   name          = "${local.name_prefix}-api"
   protocol_type = "HTTP"
   description   = "omome API (Hono fat Lambda)"
@@ -19,6 +21,8 @@ resource "aws_apigatewayv2_api" "main" {
 # フロントは Amplify Auth の fetchAuthSession().tokens.accessToken を Bearer で送る。
 # API Gateway の JWT Authorizer がトークン署名・有効期限・発行者を検証する。
 resource "aws_apigatewayv2_authorizer" "cognito" {
+  provider = aws.compute
+
   api_id           = aws_apigatewayv2_api.main.id
   authorizer_type  = "JWT"
   identity_sources = ["$request.header.Authorization"]
@@ -32,6 +36,8 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
 
 # Lambda プロキシ統合（payload format 2.0）
 resource "aws_apigatewayv2_integration" "app" {
+  provider = aws.compute
+
   api_id                 = aws_apigatewayv2_api.main.id
   integration_type       = "AWS_PROXY"
   integration_uri        = aws_lambda_function.app.invoke_arn
@@ -41,6 +47,8 @@ resource "aws_apigatewayv2_integration" "app" {
 # 全ルートを Lambda へ委譲（Hono が内部でルーティング）。
 # 認証は全エンドポイントで必須。
 resource "aws_apigatewayv2_route" "catch_all" {
+  provider = aws.compute
+
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "ANY /{proxy+}"
   target             = "integrations/${aws_apigatewayv2_integration.app.id}"
@@ -50,6 +58,8 @@ resource "aws_apigatewayv2_route" "catch_all" {
 
 # $default ステージ（ステージプレフィックスなしで invoke_url = https://<api-id>.execute-api.<region>.amazonaws.com）
 resource "aws_apigatewayv2_stage" "default" {
+  provider = aws.compute
+
   api_id      = aws_apigatewayv2_api.main.id
   name        = "$default"
   auto_deploy = true
