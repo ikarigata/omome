@@ -84,7 +84,8 @@ function SortableSetRow({
   }
 
   // 手数を減らすためのフォーカス制御。重量 → 回数の順に移動する。
-  const weightRef = useRef<HTMLInputElement>(null)
+  // weightRef は callback ref で代入するため mutable（| null）にする。
+  const weightRef = useRef<HTMLInputElement | null>(null)
   const repsRef = useRef<HTMLInputElement>(null)
 
   // 新規追加・種目追加直後はこの行の重量入力へ即フォーカス。
