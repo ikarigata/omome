@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -27,20 +27,26 @@ interface SetRow {
   reps: number
   subReps: number
   weight: number
-  isNew?: boolean
 }
+
+// 行ごとの保存状態。undefined = 保存済み（クリーン）。
+type SaveStatus = 'saving' | 'error'
 
 function SortableSetRow({
   setRow,
   index,
+  status,
   onUpdate,
   onDelete,
+  onRetry,
   isPending,
 }: {
   setRow: SetRow
   index: number
+  status?: SaveStatus
   onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: number) => void
   onDelete: (id: string) => void
+  onRetry: (id: string) => void
   isPending: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: setRow.id })
@@ -110,9 +116,22 @@ function SortableSetRow({
           ✕
         </Button>
       </div>
-      <div className="flex gap-4 pl-8 text-xs text-content-inverse/50">
+      <div className="flex items-center gap-4 pl-8 text-xs text-content-inverse/50">
         <span>ボリューム: {volume} kg</span>
         <span>1RM推定: {rm} kg</span>
+        {status === 'saving' && <span className="text-content-inverse/40">保存中…</span>}
+        {status === 'error' && (
+          <span className="ml-auto flex items-center gap-2 text-danger">
+            保存に失敗しました
+            <button
+              type="button"
+              onClick={() => onRetry(setRow.id)}
+              className="underline hover:opacity-80"
+            >
+              再試行
+            </button>
+          </span>
+        )}
       </div>
     </div>
   )
@@ -135,12 +154,18 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
   const deleteSet = useDeleteWorkoutSet()
 
   const [rows, setRows] = useState<SetRow[]>([])
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+  const [saveStatus, setSaveStatus] = useState<Record<string, SaveStatus>>({})
+  // 失敗した操作の再実行クロージャ（再試行ボタン用）。自動リトライはしない。
+  const retryFns = useRef<Record<string, () => void>>({})
 
-  // sets はロード中 undefined（安定参照）。`= []` 既定だと毎レンダ新しい配列になり
-  // この effect が無限ループするため、依存は素の `sets` にして中で空配列にフォールバックする。
+  // サーバ値はマウント時の初期種付けにだけ使う。以降はローカル rows が真実なので
+  // 上書き同期しない（編集中の値が保存完了の再描画で巻き戻るのを防ぐ）。
+  const seeded = useRef(false)
   useEffect(() => {
-    setRows(setsToRows(sets ?? []))
+    if (!seeded.current && sets) {
+      setRows(setsToRows(sets))
+      seeded.current = true
+    }
   }, [sets])
 
   const sensors = useSensors(
@@ -148,59 +173,65 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  async function handleAddSet() {
-    if (!workoutRecordId) return
-    const id = generateId()
-    const newRow: SetRow = { id, reps: 0, subReps: 0, weight: 0, isNew: true }
-
-    setRows((prev) => {
-      const last = prev[prev.length - 1]
-      if (last) {
-        return [...prev, { id, reps: last.reps, subReps: last.subReps, weight: last.weight }]
-      }
-      return [...prev, newRow]
-    })
-
-    setPendingIds((s) => new Set(s).add(id))
+  // 1行分の保存を実行。失敗しても値は保持し、再試行できるよう action を覚えておく。
+  async function save(id: string, action: () => Promise<unknown>) {
+    setSaveStatus((s) => ({ ...s, [id]: 'saving' }))
     try {
-      const row = rows[rows.length - 1]
-      await createSet.mutateAsync({
-        workoutRecordId,
-        data: {
-          id,
-          reps: row?.reps ?? 0,
-          subReps: row?.subReps ?? 0,
-          weight: row?.weight ?? 0,
-        },
-      })
-    } finally {
-      setPendingIds((s) => {
-        const next = new Set(s)
-        next.delete(id)
+      await action()
+      setSaveStatus((s) => {
+        const next = { ...s }
+        delete next[id]
         return next
       })
+      delete retryFns.current[id]
+    } catch {
+      // 自動リトライはしない（コスト回避）。ユーザーが再試行ボタンを押したときだけ再送。
+      retryFns.current[id] = () => void save(id, action)
+      setSaveStatus((s) => ({ ...s, [id]: 'error' }))
     }
+  }
+
+  function handleAddSet() {
+    if (!workoutRecordId) return
+    const id = generateId()
+    const last = rows[rows.length - 1]
+    const values = last
+      ? { reps: last.reps, subReps: last.subReps, weight: last.weight }
+      : { reps: 0, subReps: 0, weight: 0 }
+
+    setRows((prev) => [...prev, { id, ...values }])
+    void save(id, () => createSet.mutateAsync({ workoutRecordId, data: { id, ...values } }))
   }
 
   function handleUpdateLocal(id: string, field: keyof Pick<SetRow, 'reps' | 'subReps' | 'weight'>, value: number) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
   }
 
-  async function handleBlurUpdate(id: string) {
+  function handleBlurUpdate(id: string) {
     if (!workoutRecordId) return
     const row = rows.find((r) => r.id === id)
     if (!row) return
-    await updateSet.mutateAsync({
-      id,
-      workoutRecordId,
-      data: { reps: row.reps, subReps: row.subReps, weight: row.weight },
+    // まだ作成が完了していない行は update せず作成（再試行）に任せる。
+    const saved = sets?.find((s) => s.id === id)
+    if (!saved) return
+    // 値が変わっていなければ無駄な書き込みをしない。
+    if (saved.reps === row.reps && saved.subReps === row.subReps && saved.weight === row.weight) return
+
+    const data = { reps: row.reps, subReps: row.subReps, weight: row.weight }
+    void save(id, () => updateSet.mutateAsync({ id, workoutRecordId, data }))
+  }
+
+  function handleDelete(id: string) {
+    if (!workoutRecordId) return
+    // 削除は確定してから行を消す（失敗時に行を残して再試行できるように）。
+    void save(id, async () => {
+      await deleteSet.mutateAsync({ id, workoutRecordId })
+      setRows((prev) => prev.filter((r) => r.id !== id))
     })
   }
 
-  async function handleDelete(id: string) {
-    if (!workoutRecordId) return
-    setRows((prev) => prev.filter((r) => r.id !== id))
-    await deleteSet.mutateAsync({ id, workoutRecordId })
+  function handleRetry(id: string) {
+    retryFns.current[id]?.()
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -214,7 +245,6 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
   }
 
   const totalVolume = rows.reduce((sum, r) => sum + calcVolume(r.reps, r.subReps, r.weight), 0)
-  const isPending = createSet.isPending || updateSet.isPending || deleteSet.isPending
 
   return (
     <div className="space-y-3">
@@ -229,14 +259,16 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
           {rows.map((row, i) => (
             <div
               key={row.id}
-              onBlur={() => void handleBlurUpdate(row.id)}
+              onBlur={() => handleBlurUpdate(row.id)}
             >
               <SortableSetRow
                 setRow={row}
                 index={i}
+                status={saveStatus[row.id]}
                 onUpdate={handleUpdateLocal}
-                onDelete={(id) => void handleDelete(id)}
-                isPending={isPending || pendingIds.has(row.id)}
+                onDelete={handleDelete}
+                onRetry={handleRetry}
+                isPending={saveStatus[row.id] === 'saving'}
               />
             </div>
           ))}
@@ -244,8 +276,8 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
       </DndContext>
 
       <Button
-        onClick={() => void handleAddSet()}
-        disabled={!workoutRecordId || createSet.isPending}
+        onClick={handleAddSet}
+        disabled={!workoutRecordId}
         className="w-full"
         variant="secondary"
         size="sm"
