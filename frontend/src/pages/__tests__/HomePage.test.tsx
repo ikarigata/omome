@@ -11,12 +11,9 @@ function WorkoutDayStub() {
 }
 
 describe('HomePage', () => {
-  it('ワークアウト日の一覧（タイトル）を表示する', async () => {
+  it('ワークアウト日の一覧（メモ）を表示する', async () => {
     renderWithProviders(<HomePage />)
-    await waitFor(() => expect(screen.getByText('胸の日')).toBeInTheDocument())
-    expect(screen.getByText('脚の日')).toBeInTheDocument()
-    // タイトル未設定の日
-    expect(screen.getByText('タイトルなし')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('調子よかった')).toBeInTheDocument())
   })
 
   it('ユーザー名をヘッダに表示する', async () => {
@@ -33,8 +30,8 @@ describe('HomePage', () => {
       </Routes>,
     )
 
-    // 一覧の読み込み完了（本日分 = モックの「胸の日」が存在する）を待つ
-    await waitFor(() => expect(screen.getByText('胸の日')).toBeInTheDocument())
+    // 一覧の読み込み完了（本日分 = モックのメモ「調子よかった」が存在する）を待つ
+    await waitFor(() => expect(screen.getByText('調子よかった')).toBeInTheDocument())
 
     await user.click(screen.getByLabelText('今日のトレーニングを追加'))
 
