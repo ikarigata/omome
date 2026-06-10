@@ -131,7 +131,7 @@ export function WorkoutDayPage() {
           const exercise = exercises.find((e) => e.id === record.exerciseId)
           const isCollapsed = collapsed.has(record.id)
           return (
-            <div key={record.id} className="bg-surface-secondary rounded-xl p-4 space-y-3">
+            <div key={record.id} className="bg-surface-secondary rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -141,7 +141,7 @@ export function WorkoutDayPage() {
                 >
                   <span
                     aria-hidden
-                    className={`text-content-inverse/60 text-xs transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                    className={`text-content-inverse/60 text-xs transition-transform duration-300 ease-in-out ${isCollapsed ? '' : 'rotate-90'}`}
                   >
                     ▶
                   </span>
@@ -156,14 +156,22 @@ export function WorkoutDayPage() {
                   削除
                 </Button>
               </div>
-              {!isCollapsed && (
-                <>
-                  {record.notes && (
-                    <p className="text-sm text-content-inverse/60">{record.notes}</p>
-                  )}
-                  <ExerciseSetEditor workoutRecordId={record.id} />
-                </>
-              )}
+              {/* grid-template-rows を 0fr↔1fr で遷移させ、高さを滑らかに開閉する。
+                  中身は常にマウントしたまま overflow-hidden でクリップする。 */}
+              <div
+                className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                  isCollapsed ? 'grid-rows-[0fr]' : 'grid-rows-[1fr]'
+                }`}
+              >
+                <div className="overflow-hidden min-h-0">
+                  <div className="space-y-3 pt-3">
+                    {record.notes && (
+                      <p className="text-sm text-content-inverse/60">{record.notes}</p>
+                    )}
+                    <ExerciseSetEditor workoutRecordId={record.id} />
+                  </div>
+                </div>
+              </div>
             </div>
           )
         })}
