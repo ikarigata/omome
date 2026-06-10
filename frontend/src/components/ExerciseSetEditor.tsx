@@ -165,12 +165,12 @@ function SortableSetRow({
           ✕
         </button>
       </div>
-      <div className="flex items-center gap-4 pl-8 text-sm text-content-inverse/50">
+      <div className="flex items-center justify-end gap-4 text-sm text-content-inverse/50">
         <span>ボリューム: {volume} kg</span>
         <span>1RM推定: {rm} kg</span>
         {status === 'saving' && <span className="text-content-inverse/40">保存中…</span>}
         {status === 'error' && (
-          <span className="ml-auto flex items-center gap-2 text-danger">
+          <span className="flex items-center gap-2 text-danger">
             保存に失敗しました
             <button
               type="button"
