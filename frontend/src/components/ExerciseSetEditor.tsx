@@ -102,15 +102,17 @@ function SortableSetRow({
             />
           </div>
         </div>
-        <Button
-          variant="danger"
-          size="sm"
+        {/* 入力欄と高さ・角丸を揃えるため共有 Button は使わず、入力欄と同じ
+            rounded / py-1 / text-sm のプレーンボタンにする。 */}
+        <button
+          type="button"
+          aria-label="セットを削除"
           onClick={() => onDelete(setRow.id)}
           disabled={isPending}
-          className="shrink-0"
+          className="shrink-0 bg-danger text-white rounded px-2 py-1 text-sm hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
           ✕
-        </Button>
+        </button>
       </div>
       <div className="flex items-center gap-4 pl-8 text-xs text-content-inverse/50">
         <span>ボリューム: {volume} kg</span>
