@@ -18,12 +18,14 @@ export function ExerciseSelectPage() {
 
   async function handleSelect(exerciseId: string) {
     if (!workoutId) return
+    const id = generateId()
     await upsertRecord.mutateAsync({
-      id: generateId(),
+      id,
       workoutDayId: workoutId,
       exerciseId,
     })
-    navigate(`/workout/${workoutId}`)
+    // 追加した記録の id を渡し、戻り先で最初のセットを自動作成＆フォーカスさせる。
+    navigate(`/workout/${workoutId}`, { state: { focusRecordId: id } })
   }
 
   return (

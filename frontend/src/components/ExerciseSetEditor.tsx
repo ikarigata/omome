@@ -36,6 +36,18 @@ function toNum(s: string): number {
   return s.trim() === '' || Number.isNaN(n) ? 0 : n
 }
 
+// フォーカスを当て、既存値を全選択して上書き入力しやすくする。
+// number 型の select() は環境によって未対応なので握りつぶす。
+function focusAndSelect(el: HTMLInputElement | null) {
+  if (!el) return
+  el.focus()
+  try {
+    el.select()
+  } catch {
+    /* select 未対応でもフォーカスは効いていればよい */
+  }
+}
+
 // 行ごとの保存状態。undefined = 保存済み（クリーン）。
 type SaveStatus = 'saving' | 'error'
 
@@ -43,6 +55,7 @@ function SortableSetRow({
   setRow,
   index,
   status,
+  autoFocusWeight,
   onUpdate,
   onDelete,
   onRetry,
@@ -51,6 +64,7 @@ function SortableSetRow({
   setRow: SetRow
   index: number
   status?: SaveStatus
+  autoFocusWeight: boolean
   onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'weight'>, value: string) => void
   onDelete: (id: string) => void
   onRetry: (id: string) => void
@@ -62,6 +76,15 @@ function SortableSetRow({
     transform: CSS.Transform.toString(transform),
     transition,
   }
+
+  // 手数を減らすためのフォーカス制御。重量 → 回数の順に移動する。
+  const weightRef = useRef<HTMLInputElement>(null)
+  const repsRef = useRef<HTMLInputElement>(null)
+
+  // 新規追加・種目追加直後はこの行の重量入力へ即フォーカス。
+  useEffect(() => {
+    if (autoFocusWeight) focusAndSelect(weightRef.current)
+  }, [autoFocusWeight])
 
   const volume = calcVolume(toNum(setRow.reps), toNum(setRow.weight))
   const rm = calcRM(toNum(setRow.reps), toNum(setRow.weight))
@@ -81,23 +104,41 @@ function SortableSetRow({
           <div>
             <label className="text-xs text-content-inverse/50">レップ</label>
             <input
+              ref={repsRef}
               type="number"
               inputMode="numeric"
+              enterKeyHint="done"
               min={0}
               value={setRow.reps}
               onChange={(e) => onUpdate(setRow.id, 'reps', e.target.value)}
+              onKeyDown={(e) => {
+                // 回数を確定（Enter/完了）したらフォーカスを外して保存（blur で発火）。
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  e.currentTarget.blur()
+                }
+              }}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
             />
           </div>
           <div>
             <label className="text-xs text-content-inverse/50">重量 (kg)</label>
             <input
+              ref={weightRef}
               type="number"
               inputMode="decimal"
+              enterKeyHint="next"
               min={0}
               step={0.5}
               value={setRow.weight}
               onChange={(e) => onUpdate(setRow.id, 'weight', e.target.value)}
+              onKeyDown={(e) => {
+                // 重量を確定（Enter/次へ）したら回数欄へフォーカスを移す。
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  focusAndSelect(repsRef.current)
+                }
+              }}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-1 text-center text-sm"
             />
           </div>
@@ -143,7 +184,14 @@ function setsToRows(sets: WorkoutSetResponse[]): SetRow[] {
   }))
 }
 
-export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string }) {
+export function ExerciseSetEditor({
+  workoutRecordId,
+  autoStart = false,
+}: {
+  workoutRecordId: string
+  // 種目追加直後など、セットが無ければ最初の1セットを自動作成して重量にフォーカスする。
+  autoStart?: boolean
+}) {
   const { data: sets } = useWorkoutSets(workoutRecordId)
 
   const createSet = useCreateWorkoutSet()
@@ -152,6 +200,8 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
 
   const [rows, setRows] = useState<SetRow[]>([])
   const [saveStatus, setSaveStatus] = useState<Record<string, SaveStatus>>({})
+  // 追加直後にこの id の行の重量入力へフォーカスを当てる（手数削減）。
+  const [focusWeightId, setFocusWeightId] = useState<string | null>(null)
   // 失敗した操作の再実行クロージャ（再試行ボタン用）。自動リトライはしない。
   const retryFns = useRef<Record<string, () => void>>({})
 
@@ -198,6 +248,7 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
       : { reps: '', weight: '' }
 
     setRows((prev) => [...prev, { id, ...values }])
+    setFocusWeightId(id)
     void save(id, () =>
       createSet.mutateAsync({
         workoutRecordId,
@@ -205,6 +256,15 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
       }),
     )
   }
+
+  // 種目追加直後（autoStart）でまだセットが無いときは、最初の1セットを自動作成する。
+  const autoStarted = useRef(false)
+  useEffect(() => {
+    if (autoStart && !autoStarted.current && sets && sets.length === 0 && rows.length === 0) {
+      autoStarted.current = true
+      handleAddSet()
+    }
+  }, [autoStart, sets, rows.length])
 
   function handleUpdateLocal(id: string, field: keyof Pick<SetRow, 'reps' | 'weight'>, value: string) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
@@ -268,6 +328,7 @@ export function ExerciseSetEditor({ workoutRecordId }: { workoutRecordId: string
                 setRow={row}
                 index={i}
                 status={saveStatus[row.id]}
+                autoFocusWeight={focusWeightId === row.id}
                 onUpdate={handleUpdateLocal}
                 onDelete={handleDelete}
                 onRetry={handleRetry}
