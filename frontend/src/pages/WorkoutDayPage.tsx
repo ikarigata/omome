@@ -117,13 +117,6 @@ export function WorkoutDayPage() {
           </>
         )}
 
-        <Link
-          to={`/workout/${workoutId}/exercises`}
-          className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
-        >
-          ＋ 種目を追加
-        </Link>
-
         {records.length === 0 && (
           <p className="text-center text-content-secondary text-sm py-4">
             まだ記録がありません
@@ -181,6 +174,13 @@ export function WorkoutDayPage() {
             </div>
           )
         })}
+
+        <Link
+          to={`/workout/${workoutId}/exercises`}
+          className="block w-full text-center bg-interactive-primary text-content-inverse rounded-xl py-3 font-bold hover:bg-interactive-hover transition-colors"
+        >
+          ＋ 種目を追加
+        </Link>
       </div>
     </PageLayout>
   )
