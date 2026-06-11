@@ -63,6 +63,7 @@ function SortableSetRow({
   status,
   autoFocusWeight,
   onUpdate,
+  onCommit,
   onDelete,
   onRetry,
   onAdvance,
@@ -74,6 +75,8 @@ function SortableSetRow({
   status?: SaveStatus
   autoFocusWeight: boolean
   onUpdate: (id: string, field: keyof Pick<SetRow, 'reps' | 'weight'>, value: string) => void
+  // 重量・回数の入力欄2つからフォーカスが外れたら永続化する。
+  onCommit: (id: string) => void
   onDelete: (id: string) => void
   onRetry: (id: string) => void
   // 回数確定後、次セットの重量へ進む（無ければ新規セットを作る）。
@@ -120,7 +123,14 @@ function SortableSetRow({
           ⠿
         </button>
         <span className="text-content-inverse/60 text-sm w-5 h-10 flex items-center">{index + 1}</span>
-        <div className="flex-1 grid grid-cols-2 gap-4">
+        <div
+          className="flex-1 grid grid-cols-2 gap-4"
+          // 重量↔回数の移動（grid 内）では保存せず、入力欄2つの外へフォーカスが
+          // 抜けたときだけ永続化する。
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onCommit(setRow.id)
+          }}
+        >
           <div>
             <label className="text-sm text-content-inverse/50">重量 (kg)</label>
             <input
@@ -285,14 +295,11 @@ export function ExerciseSetEditor({
       ? { reps: last.reps, weight: last.weight }
       : { reps: '', weight: '' }
 
+    // ここでは行をローカルに足すだけで DB には書き込まない。重量・回数が
+    // 入力され、その行の入力欄からフォーカスが外れた時点で初めて登録する
+    // （handleRowBlur）。空のまま即登録して無駄打ち・失敗するのを防ぐ。
     setRows((prev) => [...prev, { id, ...values }])
     setFocusWeightId(id)
-    void save(id, () =>
-      createSet.mutateAsync({
-        workoutRecordId,
-        data: { id, reps: toNum(values.reps), weight: toNum(values.weight) },
-      }),
-    )
   }
 
   // 種目追加直後（autoStart）でまだセットが無いときは、最初の1セットを自動作成する。
@@ -308,17 +315,22 @@ export function ExerciseSetEditor({
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)))
   }
 
-  function handleBlurUpdate(id: string) {
+  // その行の入力欄2つからフォーカスが外れた時点で初めて永続化する。
+  // 未作成なら作成、作成済みなら（値が変わっていれば）更新する。
+  function handleRowBlur(id: string) {
     if (!workoutRecordId) return
     const row = rows.find((r) => r.id === id)
     if (!row) return
-    // まだ作成が完了していない行は update せず作成（再試行）に任せる。
-    const saved = sets?.find((s) => s.id === id)
-    if (!saved) return
     const data = { reps: toNum(row.reps), weight: toNum(row.weight) }
+    const saved = sets?.find((s) => s.id === id)
+    if (!saved) {
+      // 両欄とも空なら作成しない（空セットを作らない）。
+      if (row.reps.trim() === '' && row.weight.trim() === '') return
+      void save(id, () => createSet.mutateAsync({ workoutRecordId, data: { id, ...data } }))
+      return
+    }
     // 値が変わっていなければ無駄な書き込みをしない。
     if (saved.reps === data.reps && saved.weight === data.weight) return
-
     void save(id, () => updateSet.mutateAsync({ id, workoutRecordId, data }))
   }
 
@@ -375,16 +387,14 @@ export function ExerciseSetEditor({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={rows.map((r) => r.id)} strategy={verticalListSortingStrategy}>
           {rows.map((row, i) => (
-            <div
-              key={row.id}
-              onBlur={() => handleBlurUpdate(row.id)}
-            >
+            <div key={row.id}>
               <SortableSetRow
                 setRow={row}
                 index={i}
                 status={saveStatus[row.id]}
                 autoFocusWeight={focusWeightId === row.id}
                 onUpdate={handleUpdateLocal}
+                onCommit={handleRowBlur}
                 onDelete={handleDelete}
                 onRetry={handleRetry}
                 onAdvance={handleAdvance}
