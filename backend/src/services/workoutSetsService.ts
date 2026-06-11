@@ -16,6 +16,7 @@ function toResponse(row: NonNullable<SetRow>): WorkoutSetResponse {
     workoutRecordId: row.workoutRecordId,
     reps: row.reps,
     weight: Number(row.weight),
+    position: row.position,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }
@@ -90,6 +91,17 @@ export function createWorkoutSetsService(deps: {
       if (!row) throw new NotFoundError('Workout set not found')
       await assertRecordOwnership(userId, row.workoutRecordId)
       await workoutSetsRepo.delete(id)
+    },
+
+    async reorder(
+      userId: string,
+      workoutRecordId: string,
+      ids: string[],
+    ): Promise<WorkoutSetResponse[]> {
+      await assertRecordOwnership(userId, workoutRecordId)
+      await workoutSetsRepo.reorder(workoutRecordId, ids)
+      const rows = await workoutSetsRepo.findByWorkoutRecord(workoutRecordId)
+      return rows.map(toResponse)
     },
   }
 }

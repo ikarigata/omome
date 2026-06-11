@@ -67,6 +67,19 @@ export function useUpdateWorkoutSet() {
   })
 }
 
+// セットの並べ替えを永続化する。表示は ExerciseSetEditor のローカル state が
+// 即時に反映するので、ここは成功時に返ってきた並び順でキャッシュを揃えるだけ。
+export function useReorderWorkoutSets() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ workoutRecordId, ids }: { workoutRecordId: string; ids: string[] }) =>
+      workoutSetsApi.reorder(workoutRecordId, ids),
+    onSuccess: (res, { workoutRecordId }) => {
+      qc.setQueryData<WorkoutSetResponse[]>(queryKeys.workoutRecords.sets(workoutRecordId), res)
+    },
+  })
+}
+
 export function useDeleteWorkoutSet() {
   const qc = useQueryClient()
   return useMutation({

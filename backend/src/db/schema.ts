@@ -111,6 +111,9 @@ export const workoutSets = pgTable(
       .references(() => workoutRecords.id, { onDelete: 'cascade' }),
     reps: integer('reps').notNull(),
     weight: numeric('weight').notNull(),
+    // 実績内での表示順。ドラッグ並べ替えで永続化する。既存行は DEFAULT 0 で取り込み、
+    // 同値は created_at で安定ソートする。新規挿入時はアプリ側が末尾(max+1)を明示セットする。
+    position: integer('position').notNull().default(0),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   },

@@ -70,5 +70,6 @@ export function createMockWorkoutSetsRepository(): WorkoutSetsRepository {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    reorder: vi.fn(),
   } as unknown as WorkoutSetsRepository
 }

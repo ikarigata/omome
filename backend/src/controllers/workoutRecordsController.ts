@@ -1,5 +1,9 @@
 import { Hono } from 'hono'
-import { WorkoutRecordUpsertRequestSchema, WorkoutSetCreateRequestSchema } from '@omome/shared'
+import {
+  WorkoutRecordUpsertRequestSchema,
+  WorkoutSetCreateRequestSchema,
+  WorkoutSetReorderRequestSchema,
+} from '@omome/shared'
 import type { WorkoutRecordsService } from '../services/workoutRecordsService.js'
 import type { WorkoutSetsService } from '../services/workoutSetsService.js'
 import type { HonoEnv } from '../types.js'
@@ -61,6 +65,21 @@ export function createWorkoutRecordsController(deps: {
     if (!parsed.success) return c.json({ error: parsed.error.message }, 400)
     return c.json(
       await workoutSetsService.create(userId, c.req.param('workoutRecordId'), parsed.data),
+    )
+  })
+
+  // セットの並べ替え（新しい表示順での全 ID 列を受け取り position を一括更新）
+  controller.put('/:workoutRecordId/workout-sets/reorder', async (c) => {
+    const userId = c.get('userId')
+    const raw = await c.req.json().catch(() => null)
+    const parsed = WorkoutSetReorderRequestSchema.safeParse(raw)
+    if (!parsed.success) return c.json({ error: parsed.error.message }, 400)
+    return c.json(
+      await workoutSetsService.reorder(
+        userId,
+        c.req.param('workoutRecordId'),
+        parsed.data.ids,
+      ),
     )
   })
 

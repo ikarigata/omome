@@ -13,6 +13,7 @@ export {
   WorkoutSetResponseSchema,
   WorkoutSetCreateRequestSchema,
   WorkoutSetUpdateRequestSchema,
+  WorkoutSetReorderRequestSchema,
 } from './schemas/workoutSet.js'
 export { UserResponseSchema, UserUpdateRequestSchema } from './schemas/user.js'
 export { CalendarResponseSchema } from './schemas/calendar.js'
@@ -29,6 +30,7 @@ export type {
   WorkoutSetResponse,
   WorkoutSetCreateRequest,
   WorkoutSetUpdateRequest,
+  WorkoutSetReorderRequest,
   UserResponse,
   UserUpdateRequest,
   CalendarResponse,
