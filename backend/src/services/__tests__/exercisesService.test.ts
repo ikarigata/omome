@@ -103,7 +103,7 @@ describe('exercisesService', () => {
       vi.mocked(exercisesRepo.findById)
         .mockResolvedValueOnce(undefined as never) // 事前チェック
         .mockResolvedValueOnce(fakeExerciseRow() as never) // 競合後の再取得
-      vi.mocked(exercisesRepo.upsert).mockResolvedValue(null as never) // 23505 → null
+      vi.mocked(exercisesRepo.upsert).mockResolvedValue(null as never) // 制約違反 → null
       const res = await service.upsert(USER, data as never)
       expect(res.id).toBe('ex-1')
     })

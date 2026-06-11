@@ -276,7 +276,7 @@ AWS_PROFILE=terraform terraform apply
 3. **インフラ移行（apply）**: Turso 変数追加、Lambda env 切替、リージョン東京化、Neon リソース削除。`cognito.tf` は必要なら作り直し。
 4. **スキーマ適用**: `migrate.sh`（Turso 向け）で push + トリガ + seed。
 5. **デプロイ**: app/cognito-trigger Lambda を東京で更新、フロントの API オリジン更新、CloudFront 無効化。
-6. **スモークテスト**: 新規サインアップ → 種目作成 → 記録 → カレンダー → セット並べ替え → 冪等性（二度押し）まで確認。
+6. **スモークテスト**: 新規サインアップ → 種目作成 → 記録 → カレンダー → セット並べ替え → 冪等性（二度押し）まで確認。**加えて削除のカスケード**（種目削除で実績/セット/部位紐付けが消えるか）を確認する。SQLite の FK は接続既定 OFF だが Turso はサーバ既定 ON のため機能する想定。万一孤立行が残るなら FK 強制を要確認（[[turso-foreign-keys-default-on]]）。
 7. **後始末**: 設計書・CLAUDE.md・メモリ（[[neon-no-tokyo-region]] 等）を更新。
 
 ---

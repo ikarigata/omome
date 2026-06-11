@@ -2,7 +2,14 @@
 
 **対象**: omome（トレーニング記録アプリ）バックエンドの新規構築
 **位置づけ**: ゼロから実装に進めるための設計書。旧 `lift_log`（Spring Boot/Java）は仕様・ロジックの参考として参照するが、本書は新規構築の設計として記述する。
-**DBスキーマ**: 別途定義済みの Neon/PostgreSQL スキーマ（`users` / `muscle_groups` / `exercises` / `exercise_muscle_groups` / `workout_days` / `workout_records` / `workout_sets`）を正とする。
+**DBスキーマ**: 別途定義済みの SQLite/Turso スキーマ（`users` / `muscle_groups` / `exercises` / `exercise_muscle_groups` / `workout_days` / `workout_records` / `workout_sets`）を正とする（`DBスキーマ定義_sqlite.md`）。
+
+> ⚠️ **DB 移行の注記（2026-06 / `docs/omome_Turso移行設計書.md` が正）**: 当初 Neon/PostgreSQL（シンガポール）+ 2リージョン構成で設計・実装したが、**Turso（libSQL/SQLite, 東京 nrt）+ 全リソース東京** へ移行済み。本書中の Postgres 固有の記述は移行設計書・`DBスキーマ定義_sqlite.md` で読み替えること。主な差分:
+> - 接続: Neon pooled/direct（`DATABASE_URL`/`DIRECT_URL`）→ Turso 単一（`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`、`@libsql/client`）。
+> - 型: `uuid`→TEXT、`timestamptz`→TEXT(ISO8601 UTC)、`boolean`→INTEGER、`numeric`(weight)→TEXT、`date`→TEXT。
+> - 冪等の UNIQUE 違反検知: PostgreSQL `23505` → libSQL（`code='SQLITE_CONSTRAINT'` + `rawCode` 1555/2067、`isUniqueViolation`）。
+> - `updated_at`: BEFORE UPDATE plpgsql トリガ → SQLite AFTER UPDATE トリガ（再帰ガード付き）。
+> - インフラ: Neon Provider 廃止。Turso は Terraform 管理外（CLI 作成 → 変数注入）。
 
 ---
 
@@ -114,7 +121,7 @@ handler (Lambdaエントリ)
 - **`sub` → `users.id` の解決方式（確定）**: 毎リクエストで `cognito_sub` から `users.id` を1回引く（§3.2 の共通ミドルウェアで実施）。キャッシュは将来必要になった時点でミドルウェア内に追加。
 - **`password_hash` 列は削除**（パスワード管理は Cognito の責務のため不要）。
 - **`email` はアプリDB側にも保持**する（一覧表示・運用の利便性。都度 Cognito へ問い合わせるのを避ける）。Cognito 側にもメールは存在するが、表示・JOIN 用途で DB に冗長に持つ。**`email` は nullable**（email クレーム未取得でも users 行を作成できるようにするため。UNIQUE は維持）。
-- 上記に伴い `users` テーブル定義を調整する（`password_hash` 削除、`cognito_sub text NOT NULL UNIQUE` 追加、`email` の NOT NULL を外す）。**PostgreSQLスキーマ定義（`DBスキーマ定義_postgres.md`）に反映済み**。
+- 上記に伴い `users` テーブル定義を調整する（`password_hash` 削除、`cognito_sub` を NOT NULL UNIQUE 追加、`email` の NOT NULL を外す）。**スキーマ定義（`DBスキーマ定義_sqlite.md`）に反映済み**。
 
 ### 3.4 ユーザー行の作成（Post Confirmation トリガー・確定）
 - `users` 行は **Cognito の Post Confirmation Lambda トリガー**（アプリ本体とは別の専用Lambda）で、サインアップ確定時に作成する。lazy provisioning は採用しない。
@@ -347,7 +354,9 @@ Lambda はリクエスト再送・基盤側の自動リトライにより、同�
 
 ## 7. DBアクセス・接続設計
 
-### 7.1 接続文字列（2系統）
+> ⚠️ 本節は旧 Neon 構成の記述。Turso 移行後は **単一接続**（`TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`、`@libsql/client`）で、pooled/direct の2系統や `DIRECT_URL` は廃止。詳細は `docs/omome_Turso移行設計書.md`。
+
+### 7.1 接続文字列（旧 Neon。Turso では単一系統）
 | 用途 | 接続 | 環境変数（例） |
 |---|---|---|
 | アプリ実行（Lambda） | pooled（`-pooler` 付き） | `DATABASE_URL` |
