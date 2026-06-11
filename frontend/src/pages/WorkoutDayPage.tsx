@@ -9,6 +9,7 @@ import {
 } from '@/queries/useWorkoutRecords'
 import { workoutSetsQueryOptions } from '@/queries/useWorkoutSets'
 import { useExercises } from '@/queries/useExercises'
+import { useMuscleGroups } from '@/queries/useMuscleGroups'
 import { PageLayout } from '@/components/PageLayout'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
@@ -24,6 +25,9 @@ export function WorkoutDayPage() {
   const { data: day, isLoading: dayLoading } = useWorkoutDay(workoutId ?? '')
   const { data: records = [], isSuccess: recordsLoaded } = useWorkoutRecordsByDay(workoutId ?? '')
   const { data: exercises = [] } = useExercises()
+  // 種目追加ドロップダウン（ExerciseSelect）で使う部位マスタを先読みしておく。
+  // 開いた瞬間にキャッシュ済みなら、タブが後から差し込まれてカクつくことがない。
+  useMuscleGroups()
 
   // 各種目の sets をページ側で並行に先読みする。エディタを1つずつ展開させて
   // カクつかせないよう、全部揃ってから一斉に描画する（下の recordsReady で制御）。

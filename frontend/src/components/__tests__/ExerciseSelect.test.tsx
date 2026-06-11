@@ -22,14 +22,16 @@ function renderSelect(
 }
 
 describe('ExerciseSelect', () => {
-  it('available の種目一覧を表示する', () => {
+  it('available の種目一覧を表示する', async () => {
     renderSelect()
-    expect(screen.getByText('ベンチプレス')).toBeInTheDocument()
+    // 部位マスタ（MSW 経由・非同期）が揃ってからタブとリストを一緒に描画する。
+    await waitFor(() => expect(screen.getByText('ベンチプレス')).toBeInTheDocument())
     expect(screen.getByText('スクワット')).toBeInTheDocument()
   })
 
   it('種目をクリックすると onSelect にその id を渡す', async () => {
     const { onSelect } = renderSelect()
+    await waitFor(() => expect(screen.getByText('ベンチプレス')).toBeInTheDocument())
     await userEvent.click(screen.getByText('ベンチプレス'))
     expect(onSelect).toHaveBeenCalledWith(bench.id)
   })
@@ -69,8 +71,8 @@ describe('ExerciseSelect', () => {
 
   it('available が空ならタブを出さず、空メッセージを表示する', async () => {
     renderSelect({ available: [] })
-    expect(screen.getByText('追加できる種目がありません')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('追加できる種目がありません')).toBeInTheDocument())
     // 部位マスタが読み込まれてもタブは描画されない。
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'すべて' })).not.toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: 'すべて' })).not.toBeInTheDocument()
   })
 })
