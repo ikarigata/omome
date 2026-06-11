@@ -110,6 +110,65 @@ describe('ExerciseSetEditor フォーカス遷移（タップ手数の削減）'
   })
 })
 
+describe('ExerciseSetEditor 登録タイミング（入力欄から外れて初めて保存）', () => {
+  const EMPTY_RECORD = 'r0000000-0000-4000-8000-0000000000ff'
+
+  it('セット追加直後は POST せず、値を入力して入力欄から外れたら 1 回 POST する', async () => {
+    const user = userEvent.setup()
+    let postCount = 0
+    server.use(
+      http.post(`${BASE}/workout-records/:workoutRecordId/workout-sets`, async ({ request }) => {
+        postCount += 1
+        const body = (await request.json()) as { id: string; reps: number; weight: number }
+        return HttpResponse.json({
+          ...body,
+          workoutRecordId: EMPTY_RECORD,
+          position: 1,
+          createdAt: 't',
+          updatedAt: 't',
+        })
+      }),
+    )
+
+    renderWithProviders(<ExerciseSetEditor workoutRecordId={EMPTY_RECORD} autoStart />)
+
+    // autoStart で行は出るが、まだ POST はしていない。
+    await waitFor(() => expect(screen.getAllByRole('spinbutton')).toHaveLength(2))
+    expect(postCount).toBe(0)
+
+    const [weight, reps] = screen.getAllByRole('spinbutton')
+    await user.click(weight!)
+    await user.type(weight!, '60')
+    await user.click(reps!) // 入力欄内の移動では保存しない
+    expect(postCount).toBe(0)
+
+    await user.type(reps!, '10')
+    await user.tab() // 入力欄2つの外へ → ここで初めて保存
+    await waitFor(() => expect(postCount).toBe(1))
+  })
+
+  it('値を入力しないまま入力欄から外れても POST しない（空セットを作らない）', async () => {
+    const user = userEvent.setup()
+    let postCount = 0
+    server.use(
+      http.post(`${BASE}/workout-records/:workoutRecordId/workout-sets`, () => {
+        postCount += 1
+        return new HttpResponse(null, { status: 500 })
+      }),
+    )
+
+    renderWithProviders(<ExerciseSetEditor workoutRecordId={EMPTY_RECORD} autoStart />)
+    await waitFor(() => expect(screen.getAllByRole('spinbutton')).toHaveLength(2))
+
+    const [weight] = screen.getAllByRole('spinbutton')
+    await user.click(weight!)
+    await user.tab()
+    await user.tab()
+    await new Promise((r) => setTimeout(r, 30))
+    expect(postCount).toBe(0)
+  })
+})
+
 describe('ExerciseSetEditor 保存失敗時の挙動（保持＋手動リトライ）', () => {
   it('保存に失敗しても入力値を保持し、自動リトライせず、再試行ボタンで復帰する', async () => {
     const user = userEvent.setup()
