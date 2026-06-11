@@ -72,17 +72,17 @@ export function createWorkoutSetsRepository(db: DB) {
     },
 
     // ids の並びを新しい表示順とみなし、各セットの position を添字に更新する。
-    // 他実績のセットを巻き込まないよう workoutRecordId でも絞る。neon-http は
-    // インタラクティブ transaction 非対応のため batch（単一トランザクション）で原子的に実行する。
+    // 他実績のセットを巻き込まないよう workoutRecordId でも絞る。
+    // batch（単一トランザクション）で原子的に実行する。
     async reorder(workoutRecordId: string, ids: string[]) {
-      const statements: BatchItem<'pg'>[] = ids.map((id, index) =>
+      const statements: BatchItem<'sqlite'>[] = ids.map((id, index) =>
         db
           .update(workoutSets)
           .set({ position: index })
           .where(and(eq(workoutSets.id, id), eq(workoutSets.workoutRecordId, workoutRecordId))),
       )
       if (statements.length > 0) {
-        await db.batch(statements as [BatchItem<'pg'>, ...BatchItem<'pg'>[]])
+        await db.batch(statements as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
       }
     },
   }

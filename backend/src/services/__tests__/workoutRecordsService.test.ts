@@ -72,7 +72,7 @@ describe('workoutRecordsService.upsert — 親リソースの所有権', () => {
     const { workoutDaysRepo, exercisesRepo, workoutRecordsRepo, service } = setup()
     vi.mocked(workoutDaysRepo.findById).mockResolvedValue(fakeDay() as never)
     vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExercise() as never)
-    // repo は 23505 を内部で吸収し、合流した既存行を isNew:false で返す
+    // repo は制約違反（PK/UNIQUE）を内部で吸収し、合流した既存行を isNew:false で返す
     vi.mocked(workoutRecordsRepo.upsert).mockResolvedValue({ row: fakeRecord(), isNew: false } as never)
     const res = await service.upsert(USER, upsertData as never)
     expect(workoutRecordsRepo.upsert).toHaveBeenCalledOnce()

@@ -1,7 +1,7 @@
 # omome モノレポ構成設計書
 
 **対象**: omome（トレーニング記録アプリ）のリポジトリ構成、および フロント/バック間で共有する型・バリデーションスキーマ（`shared` パッケージ）の設計
-**位置づけ**: フロントとバックにまたがる横断的な構成を定義する。詳細な機能設計は `omome_フロントエンド設計書.md` / `omome_バックエンド設計書.md`、DBは `DBスキーマ定義_postgres.md` を正とする。
+**位置づけ**: フロントとバックにまたがる横断的な構成を定義する。詳細な機能設計は `omome_フロントエンド設計書.md` / `omome_バックエンド設計書.md`、DBは `DBスキーマ定義_sqlite.md` を正とする（DB は Neon/Postgres → Turso/SQLite に移行済み。`omome_Turso移行設計書.md` 参照）。
 **前提**: バックは TypeScript / Hono / Drizzle、フロントは TypeScript / React / Vite。リクエスト/レスポンスのDTOはフロント・バックで対称（バックエンド §5.2 / §5.3、フロント §5.1）。
 
 ---
@@ -45,7 +45,7 @@ omome/
 │  └─ package.json             # dependencies に "@omome/shared": "*"
 ├─ frontend/                   # SPA（React + Vite）。フロント §2
 │  └─ package.json             # dependencies に "@omome/shared": "*"
-└─ infra/                      # Terraform（AWS + Neon）。バックエンド §9
+└─ infra/                      # Terraform（AWS のみ。Turso は管理外）。バックエンド §9
 ```
 
 > `cognito-trigger/`（Post Confirmation トリガー用 Lambda、バックエンド §10）も同リポジトリに置く場合は backend と並列に配置する。本書では構成上の位置づけのみ示し、詳細はバックエンド設計書に従う。
@@ -164,7 +164,7 @@ DTO は複数テーブルを JOIN・集約した「APIの形」であり、テ�
 
 - **業務ルール / 整合性**（service層、バックエンド §6）: 中間テーブルの全置換、upsert 合流など。
 - **所有権チェック**（バックエンド §6.6）: DBを引いて他人のリソースでないか検証。Zodでは判定できない。
-- **冪等ハンドリング**（バックエンド §6.5）: PK重複（`23505`）を握って既存返却。Zodの外。
+- **冪等ハンドリング**（バックエンド §6.5）: PK/UNIQUE 重複（libSQL の制約違反。`isUniqueViolation`）を握って既存返却。Zodの外。
 - **フロントの Zod はあくまで UX 向上**（送信前チェック）であり、これがあってもバックの入力バリデーションは省略しない（同一スキーマを双方で実行する）。
 
 ---

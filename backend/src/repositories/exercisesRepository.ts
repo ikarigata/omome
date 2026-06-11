@@ -44,8 +44,8 @@ export function createExercisesRepository(db: DB) {
       }))
 
       try {
-        // neon-http はインタラクティブな transaction 非対応。batch は単一トランザクション
-        // として原子的に実行されるので、種目行 + 中間テーブル行をまとめて挿入する。
+        // batch は単一トランザクションとして原子的に実行されるので、
+        // 種目行 + 中間テーブル行をまとめて挿入する。
         const [inserted] = await db.batch([
           db
             .insert(exercises)
@@ -64,8 +64,8 @@ export function createExercisesRepository(db: DB) {
       id: string,
       data: { name?: string; description?: string | null; muscleGroups?: MuscleGroupEntry[] },
     ) {
-      // neon-http は transaction 非対応のため batch（単一トランザクション）で原子的に実行する。
-      const statements: BatchItem<'pg'>[] = []
+      // batch（単一トランザクション）で原子的に実行する。
+      const statements: BatchItem<'sqlite'>[] = []
 
       const updateData: Record<string, unknown> = {}
       if (data.name !== undefined) updateData.name = data.name
@@ -90,7 +90,7 @@ export function createExercisesRepository(db: DB) {
       }
 
       if (statements.length > 0) {
-        await db.batch(statements as [BatchItem<'pg'>, ...BatchItem<'pg'>[]])
+        await db.batch(statements as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]])
       }
     },
 

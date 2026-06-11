@@ -1,9 +1,12 @@
-import { neon } from '@neondatabase/serverless'
-import { drizzle } from 'drizzle-orm/neon-http'
+import { createClient } from '@libsql/client'
+import { drizzle } from 'drizzle-orm/libsql'
 import { muscleGroups } from '../src/db/schema.js'
 
-const sql = neon(process.env.DIRECT_URL!)
-const db = drizzle({ client: sql })
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN!,
+})
+const db = drizzle({ client })
 
 const MUSCLE_GROUPS = [
   { id: 'a1b2c3d4-0001-4001-8001-000000000001', name: '胸' },

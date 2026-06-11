@@ -25,8 +25,6 @@ data "archive_file" "cognito_trigger_placeholder" {
 # アプリ本体 Lambda（ファット Lambda: 全 /api/v1 を Hono で処理）
 # ─────────────────────────────────────────────────────────────────
 resource "aws_lambda_function" "app" {
-  provider = aws.compute
-
   function_name = "${local.name_prefix}-app"
   role          = aws_iam_role.lambda.arn
   handler       = "index.handler"
@@ -41,8 +39,9 @@ resource "aws_lambda_function" "app" {
   environment {
     variables = {
       NODE_ENV = "production"
-      # Neon pooled 接続（Lambda 実行用）
-      DATABASE_URL = local.neon_database_url
+      # Turso（東京 nrt）への HTTPS リモート接続
+      TURSO_DATABASE_URL = var.turso_database_url
+      TURSO_AUTH_TOKEN   = var.turso_auth_token
     }
   }
 
@@ -53,8 +52,6 @@ resource "aws_lambda_function" "app" {
 
 # API Gateway → Lambda の呼び出し許可
 resource "aws_lambda_permission" "api_gateway" {
-  provider = aws.compute
-
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.app.function_name
@@ -80,8 +77,9 @@ resource "aws_lambda_function" "cognito_trigger" {
 
   environment {
     variables = {
-      # Cognito トリガーは pooler 非対応操作を含む可能性があるため direct 接続を使用
-      DATABASE_URL = local.neon_direct_url
+      # Turso（東京 nrt）への HTTPS リモート接続
+      TURSO_DATABASE_URL = var.turso_database_url
+      TURSO_AUTH_TOKEN   = var.turso_auth_token
     }
   }
 

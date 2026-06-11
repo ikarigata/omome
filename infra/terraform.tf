@@ -7,13 +7,6 @@ terraform {
       version = "~> 5.0"
     }
 
-    # コミュニティ製 Neon Provider — version を固定する。
-    # terraform init -upgrade は実行しないこと（リソース再作成 = データ損失のリスク）。
-    neon = {
-      source  = "kislerdm/neon"
-      version = "0.6.3"
-    }
-
     archive = {
       source  = "hashicorp/archive"
       version = "~> 2.0"

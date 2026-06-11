@@ -10,13 +10,14 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:triggers": "tsx scripts/apply-triggers.ts",
     "db:seed": "tsx scripts/seed.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
+    "@libsql/client": "^0.17.3",
     "@omome/shared": "*",
     "drizzle-orm": "^0.38.0",
     "hono": "^4.6.0",

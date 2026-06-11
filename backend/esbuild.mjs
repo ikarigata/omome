@@ -7,7 +7,8 @@ await esbuild.build({
   target: 'node22',
   format: 'cjs',
   outfile: 'dist/index.js',
-  // @neondatabase/serverless uses WebSocket, mark ws as external to avoid bundling issues
+  // @libsql/client/web は pure-JS（fetch/WebSocket ベース）。ネイティブの `libsql`
+  // バイナリには依存しないのでそのままバンドルできる。external 不要。
   external: [],
   banner: {
     // Required for __dirname/__filename usage in ESM-compiled CJS

@@ -1,7 +1,12 @@
+import { createClient } from '@libsql/client/web'
 import type { PostConfirmationTriggerEvent } from 'aws-lambda'
-import { neon } from '@neondatabase/serverless'
 
-const sql = neon(process.env.DATABASE_URL!)
+// Lambda ランタイムでは pure-JS の web クライアントを使う（ネイティブバイナリを
+// バンドルしないため）。Turso へは HTTPS リモート接続（libsql:// スキーム）。
+const client = createClient({
+  url: process.env.TURSO_DATABASE_URL!,
+  authToken: process.env.TURSO_AUTH_TOKEN!,
+})
 
 export const handler = async (event: PostConfirmationTriggerEvent) => {
   const { sub, name, email } = event.request.userAttributes
@@ -13,11 +18,10 @@ export const handler = async (event: PostConfirmationTriggerEvent) => {
 
   const id = crypto.randomUUID()
 
-  await sql`
-    INSERT INTO users (id, cognito_sub, name, email)
-    VALUES (${id}, ${sub}, ${name}, ${email ?? null})
-    ON CONFLICT (cognito_sub) DO NOTHING
-  `
+  await client.execute({
+    sql: 'INSERT INTO users (id, cognito_sub, name, email) VALUES (?, ?, ?, ?) ON CONFLICT (cognito_sub) DO NOTHING',
+    args: [id, sub, name, email ?? null],
+  })
 
   console.log(
     JSON.stringify({

@@ -29,16 +29,28 @@ export class BadRequestError extends AppError {
   }
 }
 
-// PostgreSQL unique violation error code
-const PG_UNIQUE_VIOLATION = '23505'
+// SQLite / libSQL の「PK 重複 / UNIQUE 重複」判定。
+// 冪等性（クライアント生成 UUID + 重複→既存返却 200）の要。PostgreSQL の 23505 は
+// PK も UNIQUE も一括だったが、libSQL はエラー表現が接続経路で異なるため複数経路で拾う:
+//   - local（:memory: テスト等）: code='SQLITE_CONSTRAINT'、拡張コードは rawCode（数値）
+//       1555 = SQLITE_CONSTRAINT_PRIMARYKEY / 2067 = SQLITE_CONSTRAINT_UNIQUE
+//   - remote（Turso/hrana）: code に拡張コード文字列が入る場合がある
+// NOT NULL / FOREIGN KEY / CHECK 違反は「重複」ではないので除外しなければならない
+//   （ID 欠落の NOT NULL 違反などは握りつぶさず 500 として顕在化させる方針）。
+//   SQLite は PK 重複も "UNIQUE constraint failed" と表現するため、メッセージで判別できる。
+const SQLITE_PK_VIOLATION = 1555
+const SQLITE_UNIQUE_VIOLATION = 2067
 
 export function isUniqueViolation(err: unknown): boolean {
-  return (
-    typeof err === 'object' &&
-    err !== null &&
-    'code' in err &&
-    (err as { code: string }).code === PG_UNIQUE_VIOLATION
-  )
+  if (typeof err !== 'object' || err === null) return false
+  const e = err as { code?: unknown; rawCode?: unknown; message?: unknown }
+
+  if (e.code === 'SQLITE_CONSTRAINT_UNIQUE' || e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return true
+  if (e.rawCode === SQLITE_PK_VIOLATION || e.rawCode === SQLITE_UNIQUE_VIOLATION) return true
+  if (e.code === 'SQLITE_CONSTRAINT' && typeof e.message === 'string') {
+    return /UNIQUE constraint failed/i.test(e.message)
+  }
+  return false
 }
 
 export const errorHandler: ErrorHandler<HonoEnv> = (err, c) => {
