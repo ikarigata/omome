@@ -38,6 +38,7 @@ function fakeSet() {
     workoutRecordId: 'rec-1',
     reps: 10,
     weight: '60',
+    position: 0,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   }
@@ -84,5 +85,24 @@ describe('workoutSetsService — record→day→user の所有権', () => {
     expect(workoutSetsRepo.insert).toHaveBeenCalledOnce()
     expect(res.weight).toBe(60)
     expect(typeof res.weight).toBe('number')
+  })
+
+  it('reorder は他人の所有なら 403 で並べ替えしない', async () => {
+    const { workoutRecordsRepo, workoutDaysRepo, workoutSetsRepo, service } = setup()
+    vi.mocked(workoutRecordsRepo.findById).mockResolvedValue(fakeRecord() as never)
+    vi.mocked(workoutDaysRepo.findById).mockResolvedValue(fakeDay(OTHER) as never)
+    await expect(service.reorder(USER, 'rec-1', ['set-1'])).rejects.toMatchObject({ status: 403 })
+    expect(workoutSetsRepo.reorder).not.toHaveBeenCalled()
+  })
+
+  it('reorder は所有権 OK なら reorder し、並べ替え後の一覧を返す', async () => {
+    const { workoutRecordsRepo, workoutDaysRepo, workoutSetsRepo, service } = setup()
+    vi.mocked(workoutRecordsRepo.findById).mockResolvedValue(fakeRecord() as never)
+    vi.mocked(workoutDaysRepo.findById).mockResolvedValue(fakeDay() as never)
+    vi.mocked(workoutSetsRepo.findByWorkoutRecord).mockResolvedValue([fakeSet()] as never)
+    const res = await service.reorder(USER, 'rec-1', ['set-1'])
+    expect(workoutSetsRepo.reorder).toHaveBeenCalledWith('rec-1', ['set-1'])
+    expect(res).toHaveLength(1)
+    expect(res[0]!.id).toBe('set-1')
   })
 })

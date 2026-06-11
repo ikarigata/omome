@@ -10,6 +10,7 @@ export type {
   WorkoutSetResponse,
   WorkoutSetCreateRequest,
   WorkoutSetUpdateRequest,
+  WorkoutSetReorderRequest,
   UserResponse,
   UserUpdateRequest,
   CalendarResponse,

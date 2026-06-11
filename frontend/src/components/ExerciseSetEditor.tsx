@@ -16,7 +16,13 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useWorkoutSets, useCreateWorkoutSet, useUpdateWorkoutSet, useDeleteWorkoutSet } from '@/queries/useWorkoutSets'
+import {
+  useWorkoutSets,
+  useCreateWorkoutSet,
+  useUpdateWorkoutSet,
+  useDeleteWorkoutSet,
+  useReorderWorkoutSets,
+} from '@/queries/useWorkoutSets'
 import { Button } from '@/components/Button'
 import { generateId } from '@/lib/uuid'
 import { calcVolume, calcRM } from '@/lib/exercise'
@@ -209,6 +215,7 @@ export function ExerciseSetEditor({
   const createSet = useCreateWorkoutSet()
   const updateSet = useUpdateWorkoutSet()
   const deleteSet = useDeleteWorkoutSet()
+  const reorderSets = useReorderWorkoutSets()
 
   // サーバ値はマウント時の初期種付けにだけ使う。以降はローカル rows が真実。
   // ページ側で sets を先読み済みなら、初期描画から実データで埋まりポップインしない。
@@ -334,12 +341,16 @@ export function ExerciseSetEditor({
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
-    if (!over || active.id === over.id) return
-    setRows((prev) => {
-      const oldIndex = prev.findIndex((r) => r.id === active.id)
-      const newIndex = prev.findIndex((r) => r.id === over.id)
-      return arrayMove(prev, oldIndex, newIndex)
-    })
+    if (!over || active.id === over.id || !workoutRecordId) return
+    const oldIndex = rows.findIndex((r) => r.id === active.id)
+    const newIndex = rows.findIndex((r) => r.id === over.id)
+    if (oldIndex === -1 || newIndex === -1) return
+    const next = arrayMove(rows, oldIndex, newIndex)
+    setRows(next)
+    // まだ作成が確定していない行（楽観追加直後）は除き、保存済みの並びだけを永続化する。
+    // 表示は next（ローカル）が即時に担うので、ここは順序の永続化のためだけ。
+    const ids = next.map((r) => r.id).filter((id) => sets?.some((s) => s.id === id))
+    if (ids.length > 0) reorderSets.mutate({ workoutRecordId, ids })
   }
 
   const totalVolume = rows.reduce((sum, r) => sum + calcVolume(toNum(r.reps), toNum(r.weight)), 0)

@@ -3,6 +3,7 @@ import {
   WorkoutSetCreateRequestSchema,
   WorkoutSetUpdateRequestSchema,
   WorkoutSetResponseSchema,
+  WorkoutSetReorderRequestSchema,
 } from '../workoutSet.js'
 
 const UUID = '11111111-1111-4111-8111-111111111111'
@@ -56,9 +57,24 @@ describe('WorkoutSetResponseSchema', () => {
       workoutRecordId: UUID,
       reps: 10,
       weight: 60,
+      position: 0,
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
     })
     expect(r.success).toBe(true)
+  })
+})
+
+describe('WorkoutSetReorderRequestSchema', () => {
+  it('UUID 配列 → OK', () => {
+    expect(WorkoutSetReorderRequestSchema.safeParse({ ids: [UUID] }).success).toBe(true)
+  })
+
+  it('空配列 → エラー', () => {
+    expect(WorkoutSetReorderRequestSchema.safeParse({ ids: [] }).success).toBe(false)
+  })
+
+  it('UUID でない要素 → エラー', () => {
+    expect(WorkoutSetReorderRequestSchema.safeParse({ ids: ['x'] }).success).toBe(false)
   })
 })

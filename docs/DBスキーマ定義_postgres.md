@@ -168,6 +168,7 @@ CREATE TABLE workout_sets (
     workout_record_id uuid        NOT NULL,                       -- 実績ID（→ workout_records.id）
     reps              integer     NOT NULL,                       -- レップ数（挙上回数）
     weight            numeric     NOT NULL,                       -- 重量(kg)
+    position          integer     NOT NULL DEFAULT 0,             -- 実績内の表示順（ドラッグ並べ替えで永続化。同値は created_at で安定ソート）
     -- volume（ボリューム）は DB に持たない。将来の統計実装時にアプリ側で
     -- reps * weight として算出する。
     created_at        timestamptz NOT NULL DEFAULT now(),         -- 作成日時（UTC）

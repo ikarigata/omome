@@ -7,6 +7,7 @@ import type {
   WorkoutRecordUpsertRequest,
   WorkoutSetCreateRequest,
   WorkoutSetUpdateRequest,
+  WorkoutSetReorderRequest,
   CalendarResponse,
 } from '@/api/types'
 import * as db from './data'
@@ -193,24 +194,48 @@ export const handlers = [
 
   // ── workout-sets（実績配下）──
   http.get(`${BASE}/workout-records/:workoutRecordId/workout-sets`, ({ params }) => {
-    const sets = db.workoutSets.filter((s) => s.workoutRecordId === params.workoutRecordId)
+    const sets = db.workoutSets
+      .filter((s) => s.workoutRecordId === params.workoutRecordId)
+      .sort((a, b) => a.position - b.position)
     return HttpResponse.json(sets)
   }),
   http.post(`${BASE}/workout-records/:workoutRecordId/workout-sets`, async ({ params, request }) => {
     const body = (await request.json()) as WorkoutSetCreateRequest
     const existing = db.workoutSets.find((s) => s.id === body.id)
     if (existing) return HttpResponse.json(existing)
+    const recordId = String(params.workoutRecordId)
+    const maxPos = db.workoutSets
+      .filter((s) => s.workoutRecordId === recordId)
+      .reduce((m, s) => Math.max(m, s.position), -1)
     const created = {
       id: body.id,
-      workoutRecordId: String(params.workoutRecordId),
+      workoutRecordId: recordId,
       reps: body.reps,
       weight: body.weight,
+      position: maxPos + 1,
       createdAt: db.ts(),
       updatedAt: db.ts(),
     }
     db.workoutSets.push(created)
     return HttpResponse.json(created)
   }),
+  http.put(
+    `${BASE}/workout-records/:workoutRecordId/workout-sets/reorder`,
+    async ({ params, request }) => {
+      const recordId = String(params.workoutRecordId)
+      const body = (await request.json()) as WorkoutSetReorderRequest
+      body.ids.forEach((id, index) => {
+        const set = db.workoutSets.find(
+          (s) => s.id === id && s.workoutRecordId === recordId,
+        )
+        if (set) set.position = index
+      })
+      const sets = db.workoutSets
+        .filter((s) => s.workoutRecordId === recordId)
+        .sort((a, b) => a.position - b.position)
+      return HttpResponse.json(sets)
+    },
+  ),
   http.put(`${BASE}/workout-sets/:id`, async ({ params, request }) => {
     const body = (await request.json()) as WorkoutSetUpdateRequest
     const idx = db.workoutSets.findIndex((x) => x.id === params.id)
