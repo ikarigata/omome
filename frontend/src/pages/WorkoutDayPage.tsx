@@ -61,12 +61,14 @@ export function WorkoutDayPage() {
   const recordedExerciseIds = new Set(records.map((r) => r.exerciseId))
   const availableExercises = exercises.filter((e) => !recordedExerciseIds.has(e.id))
 
-  async function handleAddExercise(exerciseId: string) {
+  function handleAddExercise(exerciseId: string) {
     if (!workoutId) return
     const id = generateId()
-    await upsertRecord.mutateAsync({ id, workoutDayId: workoutId, exerciseId })
+    // 先にフォーカス対象を決めてドロップダウンを閉じる。upsert は楽観的更新で
+    // カードと最初の入力行を即時表示し、サーバ作成は裏で走らせる（await しない）。
     setFocusRecordId(id)
     setAdding(false)
+    upsertRecord.mutate({ id, workoutDayId: workoutId, exerciseId })
   }
 
   function toggleCollapsed(recordId: string) {
@@ -224,7 +226,7 @@ export function WorkoutDayPage() {
               {adding ? (
                 <ExerciseSelect
                   available={availableExercises}
-                  onSelect={(exerciseId) => void handleAddExercise(exerciseId)}
+                  onSelect={handleAddExercise}
                   onClose={() => setAdding(false)}
                   isPending={upsertRecord.isPending}
                 />
