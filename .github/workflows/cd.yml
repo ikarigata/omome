@@ -46,19 +46,15 @@ jobs:
           (cd cognito-trigger/dist && zip -qr lambda.zip index.js)
 
       # ─── Lambda コード更新（app / cognito-trigger の2関数）───
-      # app Lambda は Neon と同居させるため ap-southeast-1（シンガポール）に配置。
-      # 認証情報の既定リージョン（vars.AWS_REGION=東京）とは別なので --region を明示する。
-      # cognito-trigger は Cognito と同一リージョン必須のため東京（既定）のまま。
+      # 全リソースを東京（vars.AWS_REGION）に統一。DB(Turso) も東京 nrt のため越境が無い。
       - name: Deploy Lambda (app)
         run: |
           aws lambda update-function-code \
             --function-name "${{ vars.LAMBDA_APP_FUNCTION_NAME }}" \
-            --region ap-southeast-1 \
             --zip-file fileb://backend/dist/lambda.zip \
             --output text --query 'FunctionName'
           aws lambda wait function-updated \
-            --function-name "${{ vars.LAMBDA_APP_FUNCTION_NAME }}" \
-            --region ap-southeast-1
+            --function-name "${{ vars.LAMBDA_APP_FUNCTION_NAME }}"
       - name: Deploy Lambda (cognito-trigger)
         run: |
           aws lambda update-function-code \

@@ -35,7 +35,6 @@ USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
 CLIENT_ID=$(terraform output -raw cognito_user_pool_client_id)
 APP_FUNCTION=$(terraform output -raw lambda_app_function_name)
 TRIGGER_FUNCTION=$(terraform output -raw lambda_cognito_trigger_function_name)
-COMPUTE_REGION=$(terraform output -raw compute_region)
 BUCKET=$(terraform output -raw frontend_s3_bucket)
 CF_DIST_ID=$(terraform output -raw cloudfront_distribution_id)
 
@@ -48,10 +47,9 @@ npm run build -w frontend
 
 # ─── 5. Lambda コードを更新 ────────────────────────────────────────
 log "Deploy Lambda: app"
-# app Lambda は compute_region（シンガポール）に居るため --region を明示する
+# 全リソース東京に統一。AWS_PROFILE=terraform の既定リージョン（東京）で実行される。
 aws lambda update-function-code \
   --function-name "$APP_FUNCTION" \
-  --region "$COMPUTE_REGION" \
   --zip-file "fileb://$ROOT/backend/dist/lambda.zip" \
   --output text --query 'FunctionName'
 

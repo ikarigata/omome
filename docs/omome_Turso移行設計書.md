@@ -170,20 +170,30 @@ END;
 - **【決定】トリガ方式を採用**（DB管理の原則を維持）。`$onUpdate`（アプリ層）案は不採用。トリガ作成 SQL は `CREATE TRIGGER IF NOT EXISTS` で冪等にし、`migrate.sh` の `db:push` 後に適用する。
 
 ### 4.5 冪等性のかなめ：ユニーク制約違反の検知（#11）
-現行は PG の `23505` 一本で「PK 重複」も「UNIQUE インデックス重複」も拾えていた。SQLite は **PK 重複は `SQLITE_CONSTRAINT_PRIMARYKEY`、UNIQUE は `SQLITE_CONSTRAINT_UNIQUE`** と別コードになるため、**両方**を拾う必要がある。
+現行は PG の `23505` 一本で「PK 重複」も「UNIQUE インデックス重複」も拾えていた。
+
+**⚠️ 実装時の重要な発見（実機 probe 済み）**: libSQL クライアントは制約違反時、**`code` には汎用の `'SQLITE_CONSTRAINT'`** を入れ、**拡張結果コードは `rawCode`（数値）** に入れる（local パス）。つまり当初案の「`code === 'SQLITE_CONSTRAINT_UNIQUE'` を見る」では **一切マッチせず冪等性が壊れる**。実測値:
+- PK 重複: `code='SQLITE_CONSTRAINT'`, `rawCode=1555`, message=`"UNIQUE constraint failed: t.id"`
+- UNIQUE 重複: `code='SQLITE_CONSTRAINT'`, `rawCode=2067`, message=`"UNIQUE constraint failed: t.v"`
+- SQLite は **PK 重複も "UNIQUE constraint failed" と表現**する（PRIMARY KEY と書かない）。
+- remote（Turso/hrana）では `code` に拡張コード文字列が入る経路もあるため、両対応する。
+
 ```ts
-import { LibsqlError } from '@libsql/client'
+const SQLITE_PK_VIOLATION = 1555      // SQLITE_CONSTRAINT_PRIMARYKEY
+const SQLITE_UNIQUE_VIOLATION = 2067  // SQLITE_CONSTRAINT_UNIQUE
 export function isUniqueViolation(err: unknown): boolean {
-  if (err instanceof LibsqlError) {
-    return err.code === 'SQLITE_CONSTRAINT_UNIQUE' || err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY'
+  if (typeof err !== 'object' || err === null) return false
+  const e = err as { code?: unknown; rawCode?: unknown; message?: unknown }
+  if (e.code === 'SQLITE_CONSTRAINT_UNIQUE' || e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') return true
+  if (e.rawCode === SQLITE_PK_VIOLATION || e.rawCode === SQLITE_UNIQUE_VIOLATION) return true
+  if (e.code === 'SQLITE_CONSTRAINT' && typeof e.message === 'string') {
+    return /UNIQUE constraint failed/i.test(e.message) // PK 重複もこの文言
   }
-  // フォールバック（ラップされている場合に備え code prefix を見る）
-  return typeof err === 'object' && err !== null && 'code' in err &&
-    typeof (err as any).code === 'string' &&
-    (err as any).code.startsWith('SQLITE_CONSTRAINT')
+  return false
 }
 ```
-> ここを誤ると冪等性（クライアント生成UUID + 重複→既存返却 200）が壊れる。`workout_records` の `UNIQUE(workout_day_id, exercise_id)` 合流、`workout_sets`/`workout_days`/`exercises` の PK 合流が全て本関数依存。**統合テスト必須**（[§7](#7-テスト)）。
+> **NOT NULL / FOREIGN KEY / CHECK 違反は除外**しなければならない（ID 欠落の NOT NULL 違反などは握りつぶさず 500 として顕在化させる方針）。これらは message が異なる（"NOT NULL constraint failed" 等）ため上記で除外される。
+> ここを誤ると冪等性（クライアント生成UUID + 重複→既存返却 200）が壊れる。`workout_records` の `UNIQUE(workout_day_id, exercise_id)` 合流、`workout_sets`/`workout_days`/`exercises` の PK 合流が全て本関数依存。→ **実 libSQL（:memory:）統合テストで全経路を検証済み**（`backend/src/repositories/__tests__/idempotency.integration.test.ts`）。
 
 ---
 
@@ -207,10 +217,24 @@ export function isUniqueViolation(err: unknown): boolean {
 - `terraform.tf` の `required_providers` から `neon` を削除。
 
 ### 5.3 Neon 撤去（データ破棄可なので単純）
-1. `neon.tf` 削除、`required_providers` から `neon` 削除、`terraform.tf`/`providers.tf` から Neon 参照削除。
-2. `terraform apply`（Neon リソースが destroy される）。state に残骸があれば `terraform state rm 'neon_*'` で掃除。
-3. Neon コンソール側のプロジェクトも削除。
-> データ破棄可のため事前バックアップ・検証期間は不要。順序の制約も無い。
+本実装では `neon.tf` / `neon` provider / `aws.compute` alias を**設定から削除済み**。ただし
+state にはまだ `neon_*` リソースと `aws.compute` 経由のリソースが残っている。provider を
+消した状態で `apply` すると「provider configuration not present」で**失敗する**ため、先に
+state から外す必要がある（データ破棄可なので destroy ではなく state rm + 手動削除でよい）:
+
+```bash
+cd infra
+# 1) Neon を state から除去（provider が無いので destroy ではなく rm）
+terraform state rm neon_database.omome neon_role.omome neon_project.main
+# 2) Neon コンソールでプロジェクトを手動削除（実データはここで消える。破棄可）
+# 3) apply: app Lambda / API GW など aws.compute 配下のリソースは
+#    provider alias 消滅で default(東京)へ。リージョン変更は destroy + 再作成になる。
+AWS_PROFILE=terraform terraform apply
+```
+> `aws.compute`→default の付け替えで app Lambda / API Gateway / それらの権限・統合・ルート・
+> ステージは**シンガポールで destroy → 東京で再作成**される（ステートレス compute なので問題なし）。
+> API Gateway の invoke URL が変わるが、CloudFront のオリジンは
+> `aws_apigatewayv2_stage.default.invoke_url` から動的導出のため自動追従する。
 
 ---
 

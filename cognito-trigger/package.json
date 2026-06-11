@@ -10,7 +10,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4"
+    "@libsql/client": "^0.17.3"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",

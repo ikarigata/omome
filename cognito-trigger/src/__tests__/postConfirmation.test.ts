@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { PostConfirmationTriggerEvent } from 'aws-lambda'
 
-// neon の tagged-template `sql` をモック。handler はモジュール読込時に neon() を1回呼び、
-// 返ってきたタグ関数で INSERT を発行する。同じ参照を返すことで呼び出しを記録できる。
-const h = vi.hoisted(() => ({ sqlTag: vi.fn() }))
-vi.mock('@neondatabase/serverless', () => ({
-  neon: () => h.sqlTag,
+// @libsql/client/web の createClient をモック。handler はモジュール読込時に createClient()
+// を1回呼び、返ってきた client.execute({ sql, args }) で INSERT を発行する。
+// 同じ参照を返すことで呼び出しを記録できる。
+const h = vi.hoisted(() => ({ execute: vi.fn() }))
+vi.mock('@libsql/client/web', () => ({
+  createClient: () => ({ execute: h.execute }),
 }))
 
 import { handler } from '../postConfirmation'
@@ -22,17 +23,16 @@ function makeEvent(
   } as PostConfirmationTriggerEvent
 }
 
-// 直近の INSERT 呼び出しの [strings, ...values] を取り出すヘルパ
+// 直近の execute 呼び出しの { sql, args } を取り出すヘルパ
 function lastInsert() {
-  const call = h.sqlTag.mock.calls.at(-1)!
-  const [strings, ...values] = call as [TemplateStringsArray, ...unknown[]]
-  return { sql: strings.join('?'), values }
+  const [arg] = h.execute.mock.calls.at(-1)! as [{ sql: string; args: unknown[] }]
+  return { sql: arg.sql, values: arg.args }
 }
 
 describe('postConfirmation handler', () => {
   beforeEach(() => {
-    h.sqlTag.mockReset()
-    h.sqlTag.mockResolvedValue([])
+    h.execute.mockReset()
+    h.execute.mockResolvedValue({ rows: [] })
     vi.spyOn(console, 'log').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
   })
@@ -41,10 +41,10 @@ describe('postConfirmation handler', () => {
     const event = makeEvent({ sub: 'cognito-sub-1', name: '飛鳥', email: 'asuka@example.com' })
     const result = await handler(event)
 
-    expect(h.sqlTag).toHaveBeenCalledTimes(1)
+    expect(h.execute).toHaveBeenCalledTimes(1)
     const { sql, values } = lastInsert()
     expect(sql).toContain('INSERT INTO users')
-    // values = [id, sub, name, email]
+    // args = [id, sub, name, email]
     expect(values[0]).toMatch(UUID_V4)
     expect(values[1]).toBe('cognito-sub-1')
     expect(values[2]).toBe('飛鳥')
@@ -66,18 +66,18 @@ describe('postConfirmation handler', () => {
     expect(sql).toContain('DO NOTHING')
 
     // 同じ sub で再実行しても throw せず、毎回 INSERT を発行（重複排除は DB 側の責務）
-    h.sqlTag.mockClear()
+    h.execute.mockClear()
     await expect(handler(makeEvent({ sub: 'sub-3', name: '花子' }))).resolves.toBeDefined()
-    expect(h.sqlTag).toHaveBeenCalledTimes(1)
+    expect(h.execute).toHaveBeenCalledTimes(1)
   })
 
   it('sub 欠落で throw し、INSERT を発行しない', async () => {
     await expect(handler(makeEvent({ name: '飛鳥' }))).rejects.toThrow(/sub/)
-    expect(h.sqlTag).not.toHaveBeenCalled()
+    expect(h.execute).not.toHaveBeenCalled()
   })
 
   it('name 欠落で throw し、INSERT を発行しない', async () => {
     await expect(handler(makeEvent({ sub: 'sub-4' }))).rejects.toThrow()
-    expect(h.sqlTag).not.toHaveBeenCalled()
+    expect(h.execute).not.toHaveBeenCalled()
   })
 })

@@ -1,13 +1,7 @@
 variable "aws_region" {
-  description = "AWS リージョン（Cognito / S3 / CloudFront / cognito-trigger を配置する。ユーザーに近い東京）"
+  description = "AWS リージョン（全リソースを東京に統一。DB(Turso) も東京 nrt のため越境が無い）"
   type        = string
   default     = "ap-northeast-1"
-}
-
-variable "compute_region" {
-  description = "app Lambda + API Gateway を配置するリージョン。Neon（シンガポール）と同一リージョンに同居させ、1リクエスト内の DB 往復レイテンシを削減する。Cognito/S3/CloudFront は var.aws_region 側のまま。"
-  type        = string
-  default     = "ap-southeast-1"
 }
 
 variable "env" {
@@ -21,8 +15,13 @@ variable "env" {
   }
 }
 
-variable "neon_api_key" {
-  description = "Neon API キー（Neon コンソール → Account Settings → API Keys で発行）"
+variable "turso_database_url" {
+  description = "Turso データベース URL（libsql://omome-<org>.turso.io）。Turso は Terraform 管理外で、turso CLI で作成した値を渡す。Lambda の環境変数 TURSO_DATABASE_URL に注入する。"
+  type        = string
+}
+
+variable "turso_auth_token" {
+  description = "Turso 認証トークン（turso db tokens create omome）。Lambda の環境変数 TURSO_AUTH_TOKEN に注入する。"
   type        = string
   sensitive   = true
 }

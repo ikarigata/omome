@@ -33,9 +33,9 @@ output "lambda_app_function_name" {
   value       = aws_lambda_function.app.function_name
 }
 
-output "compute_region" {
-  description = "app Lambda + API Gateway を配置したリージョン（deploy.sh が aws cli の --region に使用）"
-  value       = var.compute_region
+output "aws_region" {
+  description = "全リソースを配置するリージョン（東京）。deploy.sh / CD が aws cli の --region に使用。"
+  value       = var.aws_region
 }
 
 output "lambda_cognito_trigger_function_name" {
@@ -46,16 +46,4 @@ output "lambda_cognito_trigger_function_name" {
 output "github_actions_role_arn" {
   description = "GitHub Actions（CD）が assume する IAM ロール ARN。GitHub Secret AWS_ROLE_ARN に登録する。"
   value       = aws_iam_role.github_actions.arn
-}
-
-output "neon_database_url" {
-  description = "Neon pooled 接続文字列（Lambda 環境変数 DATABASE_URL。Drizzle Kit の direct 接続には使わない）"
-  value       = local.neon_database_url
-  sensitive   = true
-}
-
-output "neon_direct_url" {
-  description = "Neon direct 接続文字列（マイグレーション用 DIRECT_URL。ローカル/CI から Drizzle Kit で使用）"
-  value       = local.neon_direct_url
-  sensitive   = true
 }
