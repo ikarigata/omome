@@ -143,8 +143,9 @@ export function ExercisesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editingExercise, setEditingExercise] = useState<ExerciseResponse | null>(null)
 
-  async function handleCreate(state: ExerciseFormState) {
-    await createExercise.mutateAsync({
+  function handleCreate(state: ExerciseFormState) {
+    // 楽観的更新により一覧へ即時反映されるので、応答を待たずフォームを閉じる。
+    createExercise.mutate({
       id: generateId(),
       name: state.name,
       description: state.description || undefined,
