@@ -107,10 +107,15 @@ function SortableSetRow({
       <div className="flex items-end gap-2">
         {/* 左端のハンドル・番号は入力欄（py-2 + text-base ≒ h-10）と高さを揃え、
             items-end で下端を合わせたうえで中央寄せし、入力欄の縦中心と一致させる。 */}
+        {/* touch-none が無いとタッチがスクロールに奪われ、ドラッグ開始イベントが
+            dnd-kit に届かない（ハンドルでのドラッグが効かない原因）。select-none で
+            長押し時の文字選択も抑止する。タップ標的を広げるため px を増やす。 */}
         <button
+          type="button"
+          aria-label="並び替え"
           {...attributes}
           {...listeners}
-          className="text-content-inverse/30 cursor-grab active:cursor-grabbing px-1 h-10 flex items-center"
+          className="text-content-inverse/30 cursor-grab active:cursor-grabbing touch-none select-none px-2 h-10 flex items-center"
         >
           ⠿
         </button>
@@ -244,8 +249,12 @@ export function ExerciseSetEditor({
     }
   }, [sets])
 
+  // タッチでは「少し押し続けてから動かす」と確実にドラッグ開始し、軽いタップ/スクロールと
+  // 誤認しないようにする。distance だけだと縦スクロール開始と競合しやすいため delay を併用。
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: { delay: 120, tolerance: 6 },
+    }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
