@@ -1,5 +1,8 @@
 import { createClient } from '@libsql/client/web'
-import { drizzle } from 'drizzle-orm/libsql'
+// drizzle-orm/libsql のデフォルトエントリは require('@libsql/client')（ネイティブ版）を
+// 引き込み、Lambda で `Cannot find module '@libsql/linux-x64-gnu'` を起こす。web サブパス
+// は @libsql/client/web（pure-JS）を使うのでこちらを import する。
+import { drizzle } from 'drizzle-orm/libsql/web'
 import * as schema from './schema.js'
 
 // Lambda ランタイムでは pure-JS の web クライアントを使う（ネイティブバイナリを

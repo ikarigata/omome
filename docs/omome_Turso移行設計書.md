@@ -29,7 +29,7 @@
 
 | # | PG 特有要素 | 使用箇所 | SQLite/libSQL での置換 |
 |---|---|---|---|
-| 1 | ドライバ `@neondatabase/serverless` + `drizzle-orm/neon-http` | `backend/src/db/client.ts`, `backend/scripts/seed.ts`, `cognito-trigger/src/postConfirmation.ts` | `@libsql/client` + `drizzle-orm/libsql`（`createClient({ url, authToken })`） |
+| 1 | ドライバ `@neondatabase/serverless` + `drizzle-orm/neon-http` | `backend/src/db/client.ts`, `backend/scripts/seed.ts`, `cognito-trigger/src/postConfirmation.ts` | `@libsql/client/web` + **`drizzle-orm/libsql/web`**（`createClient({ url, authToken })`）。Lambda は pure-JS の web サブパス必須（[§4.6](#46-lambda-では-web-サブパス必須)） |
 | 2 | スキーマ DSL `drizzle-orm/pg-core`（`pgTable`） | `backend/src/db/schema.ts` | `drizzle-orm/sqlite-core`（`sqliteTable`） |
 | 3 | `uuid` 型 | 全テーブルの id / 外部キー | `text`（クライアント生成 UUID をそのまま格納。SQLite に uuid 型は無い） |
 | 4 | `timestamp({ withTimezone: true })` = `timestamptz` | created_at / updated_at 全箇所 | `text`（ISO8601 UTC。[§4.3](#43-タイムスタンプ-timestamptz--text-iso8601-最重要)） |
@@ -194,6 +194,23 @@ export function isUniqueViolation(err: unknown): boolean {
 ```
 > **NOT NULL / FOREIGN KEY / CHECK 違反は除外**しなければならない（ID 欠落の NOT NULL 違反などは握りつぶさず 500 として顕在化させる方針）。これらは message が異なる（"NOT NULL constraint failed" 等）ため上記で除外される。
 > ここを誤ると冪等性（クライアント生成UUID + 重複→既存返却 200）が壊れる。`workout_records` の `UNIQUE(workout_day_id, exercise_id)` 合流、`workout_sets`/`workout_days`/`exercises` の PK 合流が全て本関数依存。→ **実 libSQL（:memory:）統合テストで全経路を検証済み**（`backend/src/repositories/__tests__/idempotency.integration.test.ts`）。
+
+### 4.6 Lambda では web サブパス必須
+
+> 🟢 **デプロイ後に実害が出た罠**（2026-06-11、移行デプロイ直後）。ログインは出来るがトレーニング日追加など全 API が失敗。app Lambda の CloudWatch ログに `Runtime.ImportModuleError: Cannot find module '@libsql/linux-x64-gnu'`。
+
+`backend/src/db/client.ts` のクライアントを `@libsql/client/web`（pure-JS）にしていても、**drizzle を `drizzle-orm/libsql`（デフォルトエントリ）から import すると、その実体 `driver.cjs` が `require('@libsql/client')`（ネイティブ版）を引き込む**。esbuild はそれをバンドルし、ネイティブ binding `@libsql/linux-x64-gnu` を実行時 require → Lambda 起動クラッシュ。クライアントを web 化しても drizzle 側でネイティブが混入するので無意味。
+
+**正**: drizzle も web サブパスから import する。
+
+```ts
+import { createClient } from '@libsql/client/web'
+import { drizzle } from 'drizzle-orm/libsql/web'   // ← 'drizzle-orm/libsql' ではない
+```
+
+`drizzle-orm/libsql/web` は内部で `@libsql/client/web` を使う（`createClient` の I/F は同一）。CLAUDE.md の「Lambda は pure-JS の `@libsql/client/web`」は **drizzle の import 元にも適用**される、と読むこと。
+
+**検証**: ビルド成果物を直接 grep する。`grep -c linux-x64-gnu backend/dist/index.js` が **0**、`require("@libsql/client")`（web 無し）が無いこと。pure-JS スタックの目印として `hrana-client` が含まれていれば OK。`cognito-trigger` は drizzle を使わず `@libsql/client/web` を直接利用するため本問題は起きない（実際サインアップ＝Post Confirmation は移行直後から成功していた）。
 
 ---
 
