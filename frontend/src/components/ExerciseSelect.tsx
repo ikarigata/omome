@@ -36,6 +36,10 @@ function FilterTab({
  *
  * 上部に部位フィルタータブを持つ。タブは「すべて」＋選択肢に出ている種目が
  * 実際に持つ部位だけを部位マスタ順で並べる単一選択。
+ *
+ * 部位マスタが届くまではタブもリストも描画しない。タブだけ後から差し込まれて
+ * リストが下にずれるのを防ぐため、揃ってからタブとリストを一緒に出す
+ * （親側で部位マスタを先読みしていれば、この待ちは実質発生しない）。
  */
 export function ExerciseSelect({
   available,
@@ -48,7 +52,7 @@ export function ExerciseSelect({
   onClose: () => void
   isPending?: boolean
 }) {
-  const { data: allMuscleGroups = [] } = useMuscleGroups()
+  const { data: allMuscleGroups = [], isLoading: groupsLoading } = useMuscleGroups()
 
   // null = 「すべて」。それ以外は部位 id。
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
@@ -80,47 +84,53 @@ export function ExerciseSelect({
         </button>
       </div>
 
-      {filterGroups.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto px-2 pb-1">
-          <FilterTab
-            label="すべて"
-            active={selectedGroupId == null}
-            onClick={() => setSelectedGroupId(null)}
-          />
-          {filterGroups.map((mg) => (
-            <FilterTab
-              key={mg.id}
-              label={mg.name}
-              active={selectedGroupId === mg.id}
-              onClick={() => setSelectedGroupId(mg.id)}
-            />
-          ))}
-        </div>
-      )}
+      {groupsLoading ? (
+        <p className="text-center text-content-inverse/60 text-sm py-6">読み込み中…</p>
+      ) : (
+        <>
+          {filterGroups.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto px-2 pb-1">
+              <FilterTab
+                label="すべて"
+                active={selectedGroupId == null}
+                onClick={() => setSelectedGroupId(null)}
+              />
+              {filterGroups.map((mg) => (
+                <FilterTab
+                  key={mg.id}
+                  label={mg.name}
+                  active={selectedGroupId === mg.id}
+                  onClick={() => setSelectedGroupId(mg.id)}
+                />
+              ))}
+            </div>
+          )}
 
-      <div className="max-h-72 overflow-y-auto space-y-1">
-        {filtered.length === 0 ? (
-          <p className="text-center text-content-inverse/60 text-sm py-6">
-            追加できる種目がありません
-          </p>
-        ) : (
-          filtered.map((exercise) => (
-            <button
-              key={exercise.id}
-              type="button"
-              onClick={() => onSelect(exercise.id)}
-              disabled={isPending}
-              className="w-full text-left bg-surface-container text-content-inverse rounded-lg p-3 hover:opacity-80 transition-opacity disabled:opacity-50"
-            >
-              <p className="font-bold">{exercise.name}</p>
-              <p className="text-sm text-content-inverse/60">
-                {getPrimaryMuscleGroup(exercise)?.name}
-                {exercise.muscleGroups.length > 1 && ` 他${exercise.muscleGroups.length - 1}部位`}
+          <div className="max-h-72 overflow-y-auto space-y-1">
+            {filtered.length === 0 ? (
+              <p className="text-center text-content-inverse/60 text-sm py-6">
+                追加できる種目がありません
               </p>
-            </button>
-          ))
-        )}
-      </div>
+            ) : (
+              filtered.map((exercise) => (
+                <button
+                  key={exercise.id}
+                  type="button"
+                  onClick={() => onSelect(exercise.id)}
+                  disabled={isPending}
+                  className="w-full text-left bg-surface-container text-content-inverse rounded-lg p-3 hover:opacity-80 transition-opacity disabled:opacity-50"
+                >
+                  <p className="font-bold">{exercise.name}</p>
+                  <p className="text-sm text-content-inverse/60">
+                    {getPrimaryMuscleGroup(exercise)?.name}
+                    {exercise.muscleGroups.length > 1 && ` 他${exercise.muscleGroups.length - 1}部位`}
+                  </p>
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
