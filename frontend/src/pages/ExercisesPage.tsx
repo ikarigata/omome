@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useExercises, useCreateExercise, useUpdateExercise, useDeleteExercise } from '@/queries/useExercises'
 import { useMuscleGroups } from '@/queries/useMuscleGroups'
 import { PageLayout } from '@/components/PageLayout'
 import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { FilterTab } from '@/components/FilterTab'
 import { generateId } from '@/lib/uuid'
 import { getPrimaryMuscleGroup } from '@/lib/exercise'
 import type { ExerciseResponse, MuscleGroupResponse } from '@/api/types'
@@ -143,6 +144,23 @@ export function ExercisesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editingExercise, setEditingExercise] = useState<ExerciseResponse | null>(null)
 
+  // 部位フィルター（入力画面の種目選択と同じ挙動）。null =「すべて」。
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null)
+
+  // 登録済みの種目が実際に持つ部位だけを、部位マスタ順でタブ化する。
+  const filterGroups = useMemo(() => {
+    const present = new Set((exercises ?? []).flatMap((e) => e.muscleGroups.map((g) => g.id)))
+    return muscleGroups.filter((mg) => present.has(mg.id))
+  }, [exercises, muscleGroups])
+
+  const filteredExercises = useMemo(
+    () =>
+      selectedGroupId == null
+        ? exercises
+        : exercises?.filter((e) => e.muscleGroups.some((g) => g.id === selectedGroupId)),
+    [exercises, selectedGroupId],
+  )
+
   function handleCreate(state: ExerciseFormState) {
     // 楽観的更新により一覧へ即時反映されるので、応答を待たずフォームを閉じる。
     createExercise.mutate({
@@ -199,7 +217,25 @@ export function ExercisesPage() {
           <p className="text-center text-content-secondary text-sm py-8">読み込み中…</p>
         )}
 
-        {exercises?.map((exercise) =>
+        {filterGroups.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            <FilterTab
+              label="すべて"
+              active={selectedGroupId == null}
+              onClick={() => setSelectedGroupId(null)}
+            />
+            {filterGroups.map((mg) => (
+              <FilterTab
+                key={mg.id}
+                label={mg.name}
+                active={selectedGroupId === mg.id}
+                onClick={() => setSelectedGroupId(mg.id)}
+              />
+            ))}
+          </div>
+        )}
+
+        {filteredExercises?.map((exercise) =>
           editingExercise?.id === exercise.id ? (
             <div key={exercise.id} className="bg-surface-secondary rounded-xl p-4 space-y-4">
               <h2 className="font-bold text-content-inverse">種目を編集</h2>

@@ -27,6 +27,22 @@ describe('ExercisesPage', () => {
     expect(screen.getByText('種目名を入力してください')).toBeInTheDocument()
   })
 
+  it('部位タブで種目を絞り込む（サブ部位でもヒット）', async () => {
+    renderWithProviders(<ExercisesPage />)
+    await waitFor(() => expect(screen.getByText('ベンチプレス')).toBeInTheDocument())
+
+    // 「脚」タブ → 脚を持つ種目だけ。デッドリフトは脚がサブ部位でもヒットする。
+    await userEvent.click(screen.getByRole('button', { name: '脚' }))
+    expect(screen.getByText('スクワット')).toBeInTheDocument()
+    expect(screen.getByText('デッドリフト')).toBeInTheDocument()
+    expect(screen.queryByText('ベンチプレス')).not.toBeInTheDocument()
+    expect(screen.queryByText('ショルダープレス')).not.toBeInTheDocument()
+
+    // 「すべて」で元に戻る。
+    await userEvent.click(screen.getByRole('button', { name: 'すべて' }))
+    expect(screen.getByText('ベンチプレス')).toBeInTheDocument()
+  })
+
   it('部位未選択だと部位選択のエラー', async () => {
     renderWithProviders(<ExercisesPage />)
     await waitFor(() => expect(screen.getByText('ベンチプレス')).toBeInTheDocument())

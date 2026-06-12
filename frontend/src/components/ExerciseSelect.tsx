@@ -2,30 +2,7 @@ import { useMemo, useState } from 'react'
 import type { ExerciseResponse } from '@/api/types'
 import { useMuscleGroups } from '@/queries/useMuscleGroups'
 import { getPrimaryMuscleGroup } from '@/lib/exercise'
-
-function FilterTab({
-  label,
-  active,
-  onClick,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 px-3 py-1 rounded-full text-sm transition-all ${
-        active
-          ? 'bg-interactive-primary text-content-inverse'
-          : 'bg-surface-container text-content-inverse opacity-50'
-      }`}
-    >
-      {label}
-    </button>
-  )
-}
+import { FilterTab } from '@/components/FilterTab'
 
 /**
  * 種目選択ドロップダウン。
