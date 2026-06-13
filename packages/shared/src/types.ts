@@ -21,6 +21,7 @@ import type {
 } from './schemas/workoutSet.js'
 import type { UserResponseSchema, UserUpdateRequestSchema } from './schemas/user.js'
 import type { CalendarResponseSchema } from './schemas/calendar.js'
+import type { ExerciseProgressResponseSchema } from './schemas/exerciseProgress.js'
 
 export type ExerciseResponse = z.infer<typeof ExerciseResponseSchema>
 export type ExerciseUpsertRequest = z.infer<typeof ExerciseUpsertRequestSchema>
@@ -43,3 +44,5 @@ export type UserResponse = z.infer<typeof UserResponseSchema>
 export type UserUpdateRequest = z.infer<typeof UserUpdateRequestSchema>
 
 export type CalendarResponse = z.infer<typeof CalendarResponseSchema>
+
+export type ExerciseProgressResponse = z.infer<typeof ExerciseProgressResponseSchema>

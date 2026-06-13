@@ -1,6 +1,16 @@
 import type { ExercisesRepository } from '../repositories/exercisesRepository.js'
 import { ForbiddenError, NotFoundError } from '../middleware/error.js'
-import type { ExerciseResponse, ExerciseUpsertRequest } from '@omome/shared'
+import type {
+  ExerciseProgressResponse,
+  ExerciseResponse,
+  ExerciseUpsertRequest,
+} from '@omome/shared'
+
+// Epley 式の推定 1RM。reps が 0 のセットは換算不能なので 0 扱い。
+function estimateOneRepMax(weight: number, reps: number): number {
+  if (reps <= 0 || weight <= 0) return 0
+  return Math.round(weight * (1 + reps / 30))
+}
 
 type ExerciseRow = Awaited<ReturnType<ExercisesRepository['findById']>>
 
@@ -90,6 +100,46 @@ export function createExercisesService(deps: { exercisesRepo: ExercisesRepositor
       if (!existing) throw new NotFoundError('Exercise not found')
       if (existing.userId !== userId) throw new ForbiddenError()
       await exercisesRepo.delete(id)
+    },
+
+    // 統計画面用：種目の進捗を 1 セッション（= トレーニング日）単位で集約して返す。
+    async getProgress(userId: string, id: string): Promise<ExerciseProgressResponse> {
+      const existing = await exercisesRepo.findById(id)
+      if (!existing) throw new NotFoundError('Exercise not found')
+      if (existing.userId !== userId) throw new ForbiddenError()
+
+      const rows = await exercisesRepo.findSetsByExercise(userId, id)
+
+      // 日付昇順で来る行を workoutDayId ごとに集約する。挿入順を保つため Map を使う。
+      const byDay = new Map<
+        string,
+        { workoutDayId: string; date: string; totalVolume: number; maxWeight: number; oneRM: number }
+      >()
+      for (const row of rows) {
+        const weight = Number(row.weight)
+        const point = byDay.get(row.workoutDayId) ?? {
+          workoutDayId: row.workoutDayId,
+          date: row.date,
+          totalVolume: 0,
+          maxWeight: 0,
+          oneRM: 0,
+        }
+        point.totalVolume += row.reps * weight
+        point.maxWeight = Math.max(point.maxWeight, weight)
+        point.oneRM = Math.max(point.oneRM, estimateOneRepMax(weight, row.reps))
+        byDay.set(row.workoutDayId, point)
+      }
+
+      return {
+        exerciseId: id,
+        points: Array.from(byDay.values()).map((p) => ({
+          workoutDayId: p.workoutDayId,
+          date: p.date,
+          totalVolume: p.totalVolume,
+          maxWeight: p.maxWeight,
+          estimatedOneRepMax: p.oneRM,
+        })),
+      }
     },
   }
 }

@@ -113,6 +113,39 @@ export const workoutDays: WorkoutDayResponse[] = [
     createdAt: now(),
     updatedAt: now(),
   },
+  // 統計画面の見た目確認用に、ベンチプレスを複数セッション分用意する。
+  {
+    id: 'd0000000-0000-4000-8000-000000000004',
+    date: daysAgo(8),
+    title: '胸の日',
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: 'd0000000-0000-4000-8000-000000000005',
+    date: daysAgo(12),
+    title: '胸の日',
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: 'd0000000-0000-4000-8000-000000000006',
+    date: daysAgo(16),
+    title: '胸の日',
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: 'd0000000-0000-4000-8000-000000000007',
+    date: daysAgo(20),
+    title: '胸の日',
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
 ]
 
 export const workoutRecords: WorkoutRecordResponse[] = [
@@ -136,6 +169,39 @@ export const workoutRecords: WorkoutRecordResponse[] = [
     id: 'r0000000-0000-4000-8000-000000000003',
     workoutDayId: workoutDays[2]!.id,
     exerciseId: exercises[2]!.id,
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  // ベンチプレス（exercises[0]）の過去セッション。日付が古いほど軽め。
+  {
+    id: 'r0000000-0000-4000-8000-000000000004',
+    workoutDayId: workoutDays[3]!.id,
+    exerciseId: exercises[0]!.id,
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: 'r0000000-0000-4000-8000-000000000005',
+    workoutDayId: workoutDays[4]!.id,
+    exerciseId: exercises[0]!.id,
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: 'r0000000-0000-4000-8000-000000000006',
+    workoutDayId: workoutDays[5]!.id,
+    exerciseId: exercises[0]!.id,
+    notes: null,
+    createdAt: now(),
+    updatedAt: now(),
+  },
+  {
+    id: 'r0000000-0000-4000-8000-000000000007',
+    workoutDayId: workoutDays[6]!.id,
+    exerciseId: exercises[0]!.id,
     notes: null,
     createdAt: now(),
     updatedAt: now(),
@@ -170,6 +236,27 @@ export const workoutSets: WorkoutSetResponse[] = [
     createdAt: now(),
     updatedAt: now(),
   },
+  // ベンチプレスの過去セッション（古いほど軽め → 右肩上がりの推移になる）
+  ...[
+    { rec: 3, top: 50 },
+    { rec: 4, top: 52.5 },
+    { rec: 5, top: 55 },
+    { rec: 6, top: 57.5 },
+  ].flatMap(({ rec, top }, i) =>
+    [
+      { reps: 10, weight: top - 10 },
+      { reps: 8, weight: top - 5 },
+      { reps: 5, weight: top },
+    ].map((s, j) => ({
+      id: `s1000000-0000-4000-8000-${String(i * 10 + j).padStart(12, '0')}`,
+      workoutRecordId: workoutRecords[rec]!.id,
+      reps: s.reps,
+      weight: s.weight,
+      position: j,
+      createdAt: now(),
+      updatedAt: now(),
+    })),
+  ),
 ]
 
 export const ts = now

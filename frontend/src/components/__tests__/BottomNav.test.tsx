@@ -4,13 +4,13 @@ import { BottomNav } from '../BottomNav'
 import { renderWithProviders } from '@/test/utils'
 
 describe('BottomNav', () => {
-  it('ホーム/カレンダー/種目 を表示する（今日・統計は無い）', () => {
+  it('ホーム/カレンダー/種目/統計 を表示する（今日は無い）', () => {
     renderWithProviders(<BottomNav />)
     expect(screen.getByText('ホーム')).toBeInTheDocument()
     expect(screen.getByText('カレンダー')).toBeInTheDocument()
     expect(screen.getByText('種目')).toBeInTheDocument()
+    expect(screen.getByText('統計')).toBeInTheDocument()
     expect(screen.queryByText('今日')).not.toBeInTheDocument()
-    expect(screen.queryByText('統計')).not.toBeInTheDocument()
   })
 
   it('現在ルートのタブがアクティブ表示になる', () => {

@@ -42,6 +42,48 @@ export const handlers = [
 
   // ── exercises ──
   http.get(`${BASE}/exercises`, () => HttpResponse.json(db.exercises)),
+  // 統計：種目の進捗をセッション（トレーニング日）単位で集約（バックエンドと同等のロジック）
+  http.get(`${BASE}/exercises/:id/progress`, ({ params }) => {
+    const exerciseId = params.id as string
+    const dateByDay = new Map(db.workoutDays.map((d) => [d.id, d.date]))
+    const recordsForExercise = db.workoutRecords.filter((r) => r.exerciseId === exerciseId)
+
+    const byDay = new Map<
+      string,
+      { workoutDayId: string; date: string; totalVolume: number; maxWeight: number; oneRM: number }
+    >()
+    for (const rec of recordsForExercise) {
+      const date = dateByDay.get(rec.workoutDayId)
+      if (!date) continue
+      const sets = db.workoutSets.filter((s) => s.workoutRecordId === rec.id)
+      const point = byDay.get(rec.workoutDayId) ?? {
+        workoutDayId: rec.workoutDayId,
+        date,
+        totalVolume: 0,
+        maxWeight: 0,
+        oneRM: 0,
+      }
+      for (const s of sets) {
+        point.totalVolume += s.reps * s.weight
+        point.maxWeight = Math.max(point.maxWeight, s.weight)
+        const est = s.reps > 0 && s.weight > 0 ? Math.round(s.weight * (1 + s.reps / 30)) : 0
+        point.oneRM = Math.max(point.oneRM, est)
+      }
+      byDay.set(rec.workoutDayId, point)
+    }
+
+    const points = Array.from(byDay.values())
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((p) => ({
+        workoutDayId: p.workoutDayId,
+        date: p.date,
+        totalVolume: p.totalVolume,
+        maxWeight: p.maxWeight,
+        estimatedOneRepMax: p.oneRM,
+      }))
+
+    return HttpResponse.json({ exerciseId, points })
+  }),
   http.post(`${BASE}/exercises`, async ({ request }) => {
     const body = (await request.json()) as ExerciseUpsertRequest
     const existing = db.exercises.find((e) => e.id === body.id)
