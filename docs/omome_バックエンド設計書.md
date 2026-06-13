@@ -173,9 +173,9 @@ workout_records (1) ──< (N) workout_sets
 - INSERT 時の created_at / updated_at も DB の DEFAULT `now()` に任せる（アプリ側で明示セットしない）。
 
 ### 4.5 volume（ボリューム）
-- volume（`reps * weight`）は **DB に持たない**（生成列は廃止）。将来の統計実装時に**アプリ側で算出**する。
+- volume（`reps * weight`）は **DB に持たない**（生成列は廃止）。必要時に**アプリ側で算出**する（統計集約 §6.3 はサーバ側で都度算出）。
 - スキーマ上 `workout_sets` に volume 列は存在しない。INSERT/UPDATE で volume を扱わない。
-- 統計（§6.3）は今回スコープ外（将来追加）。実装する際の計算式は `reps * weight` に統一する。
+- 統計（§6.3）の計算式は `reps * weight` に統一する。
 
 ### 4.6 exercises × muscle_groups（中間テーブル）
 - 多対多。`exercise_muscle_groups.is_primary` でメイン/サブを区別。メイン部位は部分ユニークインデックスにより1種目1つまで。
@@ -202,6 +202,7 @@ workout_records (1) ──< (N) workout_sets
 | POST | `/` | 種目作成（部位の紐付け含む） |
 | PUT | `/{id}` | 種目更新（部位の紐付け更新含む） |
 | DELETE | `/{id}` | 種目削除（CASCADE） |
+| GET | `/{id}/progress` | 進捗統計（セッション単位の集約。§6.3） |
 
 **muscle-groups** `/api/v1/muscle-groups`
 | GET | `/` | 部位マスタ一覧 |
@@ -299,10 +300,31 @@ workout_records (1) ──< (N) workout_sets
 - UNIQUE 違反（PostgreSQL `23505`）は**握って既存レコードを返す（合流）**。エラー（409）にはしない。ステータスは新規作成・合流とも **200 に統一**（§6.5 の冪等方針と揃える）。
 - 「同種目の再記録 = 既存 record へのセット追加」という動線をAPIで表現する。
 
-### 6.3 進捗統計（statistics/progress）※将来追加
-- **今回スコープ外**。将来追加時に実装する。
-- 実装する際は、対象種目の workout_sets を日付順に集約し、日別ボリューム・最大重量・セット内訳を返す。volume は `reps * weight` で算出する。
-- 日別集計のキーや絞り込み期間などの詳細仕様は、将来追加時に確定する。
+### 6.3 進捗統計（statistics/progress）→ 確定（実装済み）
+カレンダー（§6.4）と同じく**集約レスポンス**方式で、フロントは1エンドポイントで描画に必要な値が揃う。
+
+- **リクエスト**: `GET /api/v1/exercises/{exerciseId}/progress`
+  - 対象はログインユーザー（§3.2 で解決した `users.id`）の範囲のみ。対象種目が他人のものなら 403、存在しなければ 404（§5.1 の所有権チェックと同じ）。
+- **集約単位**: 1セッション = その種目を実施した1トレーニング日（`workout_day`）。`UNIQUE(workout_day_id, exercise_id)` により種目は1日1レコードなので、日 = レコードと一致する。
+- **レスポンス**: 記録のある日だけを **date 昇順**で返す。各点は当日の全 `workout_sets` を集約した派生値。
+  ```json
+  {
+    "exerciseId": "uuid",
+    "points": [
+      {
+        "workoutDayId": "uuid",
+        "date": "2026-06-03",
+        "totalVolume": 800,
+        "maxWeight": 60,
+        "estimatedOneRepMax": 70
+      }
+    ]
+  }
+  ```
+  - `totalVolume` = Σ(`reps * weight`)（§4.5 のとおり DB には持たず、ここで都度算出）。
+  - `maxWeight` = その日の最大 `weight`。
+  - `estimatedOneRepMax` = Epley 式 `round(weight * (1 + reps / 30))` の日内最大。`reps`/`weight` が 0 のセットは 0 扱い。
+- **実装**: `workout_sets → workout_records → workout_days` を JOIN し、`workout_records.exercise_id` と `workout_days.user_id` で絞り、サービス層で日単位に集約する（`exercisesService.getProgress` / `exercisesRepository.findSetsByExercise`）。`weight` は TEXT 格納のためサービスで `Number()` 化する。フロント設計書 §9 と整合。
 
 ### 6.4 カレンダー（workout-days/calendar）→ 確定
 旧 lift_log のロジック（月の日一覧＋全実績を別取得してフロントで突き合わせ）は参照せず、**1エンドポイントに集約**して新規実装する。
@@ -477,14 +499,14 @@ omome/
 - `users.email` を **nullable に変更**（NOT NULL を外す、UNIQUE は維持）。スキーマ定義に反映済み（§3.3 / §4.1）。
 - email 未取得ユーザーの一覧表示・運用上の扱いの細部は実装時に詰める。
 
-### 12-4. statistics/progress（進捗統計）→ 今回スコープ外（将来追加）
-- 進捗統計エンドポイントは今回実装しない。将来追加扱いとし、レスポンスの部位表現・日別集計の詳細仕様は将来追加時に確定する（§5.1 / §5.2 / §6.3）。
+### 12-4. statistics/progress（進捗統計）→ 確定済み（実装済み）
+- `GET /api/v1/exercises/{exerciseId}/progress` で実装。セッション（トレーニング日）単位の集約レスポンス（`totalVolume` / `maxWeight` / `estimatedOneRepMax`）を date 昇順で返す（§5.1 / §6.3）。
 
 ### 12-5. 冪等ハンドリング時のステータスコード → 確定済み
 - 新規作成（1回目）も PK重複・UNIQUE重複時の既存返却（2回目以降）も **200 に統一**（§6.5 / §8.1）。
 
 ### 12-6. 旧 lift_log リポジトリの参照範囲 → 確定済み
-- カレンダー集約は旧ロジックを参照せず新規に作り直す（§6.4）。統計は今回スコープ外。
+- カレンダー集約・統計集約は旧ロジックを参照せず新規に作り直す（§6.4 / §6.3）。
 - 旧 lift_log は積極的には参照しない方針。必要が生じた箇所のみ個別に参照する。
 
 ### 12-7. カレンダー仕様 → 確定済み

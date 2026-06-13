@@ -30,7 +30,7 @@
 | **サーバ状態管理** | **TanStack Query (v5)** | 本設計で新規導入。取得/キャッシュ/再取得/楽観更新 |
 | スタイリング | Tailwind CSS + CSS変数テーマ | 旧の design-system を移植。用途別トークン+CSS変数の土台は残す（テーマ切替UIは初期スコープ外、§5.5） |
 | 認証SDK | **AWS Amplify Auth（`aws-amplify`, Gen2）** | 既存 Cognito User Pool（Terraform管理）を参照して使う。トークン管理を自前実装せずに済む（§6.4 で確定） |
-| グラフ | Chart.js + react-chartjs-2 | 統計画面用。**統計は当面実装しない（あとから追加）ため、導入も統計追加時でよい** |
+| グラフ | recharts | 統計画面（`/statistics`）の推移ラインチャート用。バンドルが重いので統計ページは `React.lazy` で遅延読み込みし、メインバンドルから切り離す |
 | 並べ替え | @dnd-kit | セット並べ替えで使用（旧踏襲） |
 | UUID生成 | `crypto.randomUUID()` | 追加依存なし |
 | 開発時モック | MSW（任意） | 旧と同じ。実APIと切替 |
@@ -312,14 +312,14 @@ Tailwind 側は旧と同様、用途別トークンを `rgb(var(--token) / <alph
 | `/signup` | サインアップ（**name欄追加**） | — | Cognito サインアップ |
 | `/` | ホーム（直近の日一覧） | `useWorkoutDays` | 日の作成（＋ボタン） |
 | `/calendar` | カレンダー | `useCalendar(year, month)` | — |
-| ~~`/statistics`~~ | 統計 | **当面実装しない（あとから追加）。ルート・ボトムナビからも一旦外す**。§9 |
+| `/statistics` | 統計（種目別の推移グラフ） | `useExercises` / `useExerciseProgress(exerciseId)` | — |
 | `/exercises` | 種目管理 | `useExercises` / `useMuscleGroups` | 種目 作成/更新/削除 |
 | `/workout/:workoutId` | 日詳細 | `useWorkoutDay` / `useWorkoutRecordsByDay` | 実績削除 等 |
 | `/workout/:workoutId/exercises` | 種目選択 | `useExercises` / `useWorkoutRecordsByDay` | — |
 | `/workout/:workoutId/exercise/:exerciseId`（+`/edit`） | セット入力 | `useExercise` / 既存実績 | 実績 upsert / セット 作成・更新・削除 |
 
 - `PrivateRoute` は AuthProvider の状態で判定（旧は localStorage 直接参照、新は Context）。
-- ボトムナビは見た目そのまま踏襲。ただし**統計を当面実装しないため、統計アイコンは一旦外す**（ホーム/カレンダー/＋/種目管理）。統計追加時に項目を戻す。＋ボタンの「今日の日があれば遷移、なければ作成して遷移」ロジックも踏襲（ただしデータは Query/Mutation 経由）。
+- ボトムナビは見た目そのまま踏襲（ホーム/カレンダー/種目管理/統計）。＋ボタンの「今日の日があれば遷移、なければ作成して遷移」ロジックも踏襲（ただしデータは Query/Mutation 経由）。
 
 ---
 
@@ -386,7 +386,7 @@ Tailwind 側は旧と同様、用途別トークンを `rgb(var(--token) / <alph
 
 > **お気に入り（isFavorite）→ 確定（当面実装しない / あとから追加）**: 旧UIにあった種目のお気に入りは初期スコープから外す（型・UI・APIとも持たない）。欲しくなった時点で、スキーマ列追加とあわせて復活させる。
 
-> **統計画面 → 確定（当面実装しない / あとから追加）**: 統計画面・ルート・ボトムナビ項目・Chart.js 導入はすべて初期スコープから外す。バックエンドの statistics/progress も今回スコープ外（バックエンド §6.3）。追加時に画面・ナビ項目・グラフ依存をまとめて足す。
+> **統計画面 → 実装済み**: `/statistics`（ボトムナビ項目あり）。種目を選び、`useExerciseProgress(exerciseId)` でバックエンドの集約（`GET /exercises/:id/progress`、バックエンド §6.3）を取得し、総ボリューム / Max重量 / 推定1RM の推移を recharts のラインチャートで表示する。グラフ依存が重いためページは `React.lazy` で遅延読み込みする。
 
 > **テーマ切替 → 確定（当面実装しない / 色システムは土台を残す）**: 切替UI・ThemeContext・永続化は初期スコープ外。ただし用途別トークン + CSS変数によるカラーシステムは最初から用意し、テーマ追加が `[data-theme]` ブロックの追加だけで済む状態を維持する（§5.5）。
 
@@ -408,14 +408,15 @@ Tailwind 側は旧と同様、用途別トークンを `rgb(var(--token) / <alph
 | **置き換える** | `utils/auth.ts`, `api/auth.ts`, JWT/localStorage | Cognito（AuthProvider）へ全面置換 |
 | **更新する** | `types/`（単一部位）→ 部位配列 | §5 |
 | **破棄** | 大量の `console.log` デバッグ出力, `lift_log` 固有のトークンキー名 | 持ち込まない |
-| **当面破棄（将来追加）** | お気に入り（isFavorite）/ 統計画面 / Chart.js | 初期スコープから外す。あとから追加 |
+| **当面破棄（将来追加）** | お気に入り（isFavorite） | 初期スコープから外す。あとから追加 |
+| **実装済み** | 統計画面（`/statistics`）/ グラフは recharts | §7 / §9.2。旧の Chart.js ではなく recharts を採用 |
 | **当面破棄（土台は残す）** | ThemeSwitcher / ThemeContext / `[data-theme]` 複数テーマ | 切替UIは外すが、カラートークン構造は残す（§5.5） |
 
 ---
 
 ## 付録: 旧フロント現状サマリ（参考）
 
-- スタック: React18 + Vite4 + TS + React Router6 + Tailwind（CSS変数テーマ）+ Chart.js + @dnd-kit、開発時 MSW。※ Chart.js は統計用で、omome 初期スコープでは未導入（統計はあとから追加）。
+- スタック: React18 + Vite4 + TS + React Router6 + Tailwind（CSS変数テーマ）+ Chart.js + @dnd-kit、開発時 MSW。※ 旧 lift_log の統計は Chart.js。omome の統計画面は **recharts** で作り直した（§7 / §9.2）。
 - データフロー: `App.tsx` の `AppContent` が全データを useState 集約、起動時 `Promise.all` 一括取得、各ページへ props 配布。→ 本設計で撤廃。
 - 認証: 自前JWT、localStorage キー `lift_log_auth_token`、JWT自前デコードで期限確認。→ Cognito へ置換。
 - 型: `Exercise.muscleGroup: string`（単一）、ID サーバ採番前提。→ 部位配列・クライアント生成UUID へ。

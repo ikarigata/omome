@@ -1,7 +1,14 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { DB } from '../db/client.js'
-import { exercises, exerciseMuscleGroups, muscleGroups } from '../db/schema.js'
+import {
+  exercises,
+  exerciseMuscleGroups,
+  muscleGroups,
+  workoutDays,
+  workoutRecords,
+  workoutSets,
+} from '../db/schema.js'
 import { isUniqueViolation } from '../middleware/error.js'
 
 type MuscleGroupEntry = { id: string; isPrimary: boolean }
@@ -96,6 +103,25 @@ export function createExercisesRepository(db: DB) {
 
     async delete(id: string) {
       await db.delete(exercises).where(eq(exercises.id, id))
+    },
+
+    // 統計用：指定種目の全セット（reps / weight）を、属するトレーニング日と
+    // ともに日付昇順で返す。日ごとの集約はサービス側で行う。
+    // ownership は workout_days.user_id で担保する（種目自体の所有権は
+    // 呼び出し側が別途検証する）。weight は TEXT 格納なので呼び出し側で Number 化する。
+    async findSetsByExercise(userId: string, exerciseId: string) {
+      return db
+        .select({
+          workoutDayId: workoutDays.id,
+          date: workoutDays.date,
+          reps: workoutSets.reps,
+          weight: workoutSets.weight,
+        })
+        .from(workoutSets)
+        .innerJoin(workoutRecords, eq(workoutRecords.id, workoutSets.workoutRecordId))
+        .innerJoin(workoutDays, eq(workoutDays.id, workoutRecords.workoutDayId))
+        .where(and(eq(workoutRecords.exerciseId, exerciseId), eq(workoutDays.userId, userId)))
+        .orderBy(asc(workoutDays.date))
     },
 
     // Returns muscle groups as sorted array (primary first)

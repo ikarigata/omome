@@ -146,8 +146,8 @@
 - [x] 日詳細（`/workout/:workoutId`）
 - [x] 種目選択（`/workout/:workoutId/exercises`。記録済み種目は除外）
 - [x] セット入力（`/workout/:workoutId/exercise/:exerciseId`。@dnd-kit 並べ替え、volume フロント算出（reps * weight）、RM計算は Epley 式）
-- [x] ボトムナビ（**統計アイコンは外す**。ホーム/カレンダー/＋/種目管理）
-- [ ] ~~統計（`/statistics`）~~（**今回スコープ外。将来追加**）
+- [x] ボトムナビ（ホーム/カレンダー/種目管理/統計）
+- [x] 統計（`/statistics`。種目別の総ボリューム/Max重量/推定1RM 推移を recharts で表示。集約は `GET /exercises/:id/progress`。ページは `React.lazy` で遅延読み込み）
 
 **実装メモ:**
 - `VITE_COGNITO_USER_POOL_ID` / `VITE_COGNITO_CLIENT_ID` を `frontend/.env` に設定が必要（`.env.example` 参照）
@@ -175,3 +175,5 @@
 - [x] MSW を開発用に使うか → 採用。見た目確認用に `VITE_DEV_BYPASS_AUTH=true` で認証バイパス + MSW モック（`src/mocks/`）。本番ビルドには含まれない（デッドコード除去）
 - [ ] email 未取得ユーザーの一覧表示・運用上の扱いの細部
 - [ ] カレンダー `exerciseNames` の並び順の厳密化
+- [ ] セット並び替え（reorder）の取りこぼし: `ExerciseSetEditor.handleDragEnd` は、まだ作成が確定していない行（楽観追加直後でサーバ `sets` に未存在の id）を送信 `ids` から除外する。「追加直後・保存完了前にドラッグ」した場合その行の順序が永続化されない（実用上は保存が速く稀）。
+- [ ] セット reorder の失敗ハンドリング: reorder は `save()` ラッパーを通らないため失敗しても「再試行」UI が出ず、黙ってサーバ側の旧順序のまま（他のセット書き込みの値保持＋手動リトライ方針の対象外）。必要なら明示的なエラー表示／リトライを検討。

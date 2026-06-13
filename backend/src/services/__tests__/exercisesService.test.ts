@@ -146,4 +146,57 @@ describe('exercisesService', () => {
     vi.mocked(exercisesRepo.findById).mockResolvedValue(undefined as never)
     await expect(service.getById(USER, 'ex-1')).rejects.toBeInstanceOf(AppError)
   })
+
+  describe('getProgress — 統計集約', () => {
+    it('存在しないと 404', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(undefined as never)
+      await expect(service.getProgress(USER, 'ex-1')).rejects.toMatchObject({ status: 404 })
+    })
+
+    it('他人の所有なら 403', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExerciseRow({ userId: OTHER }) as never)
+      await expect(service.getProgress(USER, 'ex-1')).rejects.toMatchObject({ status: 403 })
+    })
+
+    it('日ごとに total/max/1RM を集約し、weight は数値化する', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExerciseRow() as never)
+      // weight は TEXT 格納なので文字列で返る想定。day-1 に 2 セット、day-2 に 1 セット。
+      vi.mocked(exercisesRepo.findSetsByExercise).mockResolvedValue([
+        { workoutDayId: 'day-1', date: '2026-01-01', reps: 10, weight: '50' },
+        { workoutDayId: 'day-1', date: '2026-01-01', reps: 5, weight: '60' },
+        { workoutDayId: 'day-2', date: '2026-01-05', reps: 8, weight: '55' },
+      ] as never)
+
+      const res = await service.getProgress(USER, 'ex-1')
+
+      expect(res.exerciseId).toBe('ex-1')
+      expect(res.points).toEqual([
+        {
+          workoutDayId: 'day-1',
+          date: '2026-01-01',
+          totalVolume: 10 * 50 + 5 * 60, // 800
+          maxWeight: 60,
+          estimatedOneRepMax: Math.round(60 * (1 + 5 / 30)), // 70
+        },
+        {
+          workoutDayId: 'day-2',
+          date: '2026-01-05',
+          totalVolume: 8 * 55, // 440
+          maxWeight: 55,
+          estimatedOneRepMax: Math.round(55 * (1 + 8 / 30)), // 70
+        },
+      ])
+    })
+
+    it('記録が無ければ points は空配列', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExerciseRow() as never)
+      vi.mocked(exercisesRepo.findSetsByExercise).mockResolvedValue([] as never)
+      const res = await service.getProgress(USER, 'ex-1')
+      expect(res.points).toEqual([])
+    })
+  })
 })

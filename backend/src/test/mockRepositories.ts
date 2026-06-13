@@ -16,6 +16,7 @@ export function createMockExercisesRepository(): ExercisesRepository {
   return {
     findAllByUser: vi.fn(),
     findById: vi.fn(),
+    findSetsByExercise: vi.fn(),
     upsert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),

@@ -51,10 +51,10 @@ infra/             Terraform（AWS のみ。Turso は Terraform 管理外で CLI
 
 - ID は `uuid` 型で **DB の DEFAULT 生成を付けない**（必ず明示 INSERT。ID 欠落は NOT NULL 違反で顕在化）。例外は `users.id` で、これは cognito-trigger Lambda が生成する。
 - `updated_at` / `created_at` は **DB 管理**。`created_at` は `DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))`、`updated_at` は AFTER UPDATE トリガ（`backend/migrations/triggers.sql`、`db:triggers` で適用）で更新。アプリ側で明示セットしない。タイムスタンプは **TEXT に ISO8601 UTC（末尾 Z）** で保存し全体を UTC 基準で統一。`workout_days.date` は `YYYY-MM-DD` の TEXT。
-- `volume = reps * weight` は**保存しない**。必要時にアプリ側で算出する（統計は現状スコープ外）。
+- `volume = reps * weight` は**保存しない**。必要時にアプリ側で算出する（統計の集約エンドポイント `GET /exercises/:id/progress` もサーバ側で都度算出する）。
 - 認証: SPA が Cognito と直接やり取りしてトークン取得。API Gateway の Cognito Authorizer が **アクセストークン**を Lambda 到達前に検証する。表示名の正は `users.name`（アプリ DB）であり、Cognito 属性ではない。フロントはプロフィールをトークンからではなく `GET /users/me` から取得する。
 - Turso 接続は単一系統: `TURSO_DATABASE_URL`（`libsql://…`）+ `TURSO_AUTH_TOKEN`。Lambda ランタイムは pure-JS の `@libsql/client/web`（HTTPS リモート、ネイティブ非依存）。ローカルの seed / 統合テストは node の `@libsql/client`（`:memory:` 可）。
-- 統計、お気に入り（`isFavorite`）、テーマ切替 UI は明示的に**初期スコープ外**（将来追加）。ただしフロントのカラーシステム（セマンティックトークン + CSS変数）は今から用意し、テーマ追加が `[data-theme]` ブロックの追加だけで済むようにしておく。
+- お気に入り（`isFavorite`）、テーマ切替 UI は明示的に**初期スコープ外**（将来追加）。ただしフロントのカラーシステム（セマンティックトークン + CSS変数）は今から用意し、テーマ追加が `[data-theme]` ブロックの追加だけで済むようにしておく。統計画面（`/statistics`）は**実装済み**（種目別の総ボリューム/Max重量/推定1RM 推移を recharts で表示、集約は `GET /exercises/:id/progress`、バックエンド §6.3 / フロント §7）。
 
 ## コマンド
 
