@@ -1,12 +1,24 @@
 import { and, eq } from 'drizzle-orm'
 import type { DB } from '../db/client.js'
-import { workoutRecords } from '../db/schema.js'
+import { workoutDays, workoutRecords } from '../db/schema.js'
 import { isUniqueViolation } from '../middleware/error.js'
 
 export function createWorkoutRecordsRepository(db: DB) {
   const repo = {
-    async findAll() {
-      return db.select().from(workoutRecords)
+    // ユーザーに属する記録のみを DB 側で絞って返す（workout_days で所有権を担保）。
+    async findAllByUser(userId: string) {
+      return db
+        .select({
+          id: workoutRecords.id,
+          workoutDayId: workoutRecords.workoutDayId,
+          exerciseId: workoutRecords.exerciseId,
+          notes: workoutRecords.notes,
+          createdAt: workoutRecords.createdAt,
+          updatedAt: workoutRecords.updatedAt,
+        })
+        .from(workoutRecords)
+        .innerJoin(workoutDays, eq(workoutDays.id, workoutRecords.workoutDayId))
+        .where(eq(workoutDays.userId, userId))
     },
 
     async findByWorkoutDay(workoutDayId: string) {

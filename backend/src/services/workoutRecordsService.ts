@@ -26,11 +26,9 @@ export function createWorkoutRecordsService(deps: {
 
   return {
     async getAll(userId: string): Promise<WorkoutRecordResponse[]> {
-      // Join through workout_days to enforce user ownership
-      const days = await workoutDaysRepo.findAllByUser(userId)
-      const dayIds = new Set(days.map((d) => d.id))
-      const rows = await workoutRecordsRepo.findAll()
-      return rows.filter((r) => dayIds.has(r.workoutDayId)).map(toResponse)
+      // DB 側で workout_days を JOIN して所有者で絞る（全件取得→アプリ側 filter をやめ、1往復に）
+      const rows = await workoutRecordsRepo.findAllByUser(userId)
+      return rows.map(toResponse)
     },
 
     async getByWorkoutDay(userId: string, workoutDayId: string): Promise<WorkoutRecordResponse[]> {
