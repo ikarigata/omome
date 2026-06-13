@@ -54,7 +54,7 @@ export function createMockWorkoutDaysRepository(): WorkoutDaysRepository {
 
 export function createMockWorkoutRecordsRepository(): WorkoutRecordsRepository {
   return {
-    findAll: vi.fn(),
+    findAllByUser: vi.fn(),
     findByWorkoutDay: vi.fn(),
     findById: vi.fn(),
     findByDayAndExercise: vi.fn(),

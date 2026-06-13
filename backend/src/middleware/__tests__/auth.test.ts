@@ -44,4 +44,18 @@ describe('authMiddleware', () => {
     expect(await res.json()).toEqual({ userId: 'user-1' })
     expect(usersRepo.findByCognitoSub).toHaveBeenCalledWith('sub-1')
   })
+
+  it('同一 sub の2回目以降は sub→userId をキャッシュし DB を引かない', async () => {
+    const { app, usersRepo } = buildApp()
+    vi.mocked(usersRepo.findByCognitoSub).mockResolvedValue({ id: 'user-1' })
+
+    const res1 = await app.request('/probe', {}, envWithSub('sub-1'))
+    const res2 = await app.request('/probe', {}, envWithSub('sub-1'))
+
+    expect(res1.status).toBe(200)
+    expect(res2.status).toBe(200)
+    expect(await res2.json()).toEqual({ userId: 'user-1' })
+    // 2回叩いても DB は1回だけ
+    expect(usersRepo.findByCognitoSub).toHaveBeenCalledTimes(1)
+  })
 })

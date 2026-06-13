@@ -29,9 +29,9 @@ resource "aws_lambda_function" "app" {
   role          = aws_iam_role.lambda.arn
   handler       = "index.handler"
   runtime       = "nodejs22.x"
-  architectures = ["x86_64"]
+  architectures = ["arm64"]
   timeout       = 30
-  memory_size   = 256
+  memory_size   = 1024
 
   filename         = data.archive_file.lambda_placeholder.output_path
   source_code_hash = data.archive_file.lambda_placeholder.output_base64sha256
