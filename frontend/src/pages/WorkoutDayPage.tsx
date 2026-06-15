@@ -173,7 +173,7 @@ export function WorkoutDayPage() {
           const exercise = exercises.find((e) => e.id === record.exerciseId)
           const isCollapsed = collapsed.has(record.id)
           return (
-            <div key={record.id} className="bg-surface-secondary rounded-xl p-4">
+            <div key={record.id} className="bg-surface-secondary rounded-xl px-4 py-3">
               <div className="flex items-center justify-between">
                 <button
                   type="button"
@@ -216,7 +216,7 @@ export function WorkoutDayPage() {
                 }`}
               >
                 <div className="overflow-hidden min-h-0">
-                  <div className="space-y-3 pt-3">
+                  <div className="space-y-2 pt-2">
                     {record.notes && (
                       <p className="text-sm text-content-inverse/60">{record.notes}</p>
                     )}
