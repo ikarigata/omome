@@ -52,12 +52,14 @@ export function createWorkoutRecordsService(deps: {
     },
 
     async upsert(userId: string, data: WorkoutRecordUpsertRequest): Promise<WorkoutRecordResponse> {
-      // Ownership check: verify parent workout_day and exercise belong to user
-      const day = await workoutDaysRepo.findById(data.workoutDayId)
+      // Ownership check: verify parent workout_day and exercise belong to user.
+      // 両者はリクエストの id のみに依存し互いに独立なので並列に取得する（直列2往復→1往復相当）。
+      const [day, exercise] = await Promise.all([
+        workoutDaysRepo.findById(data.workoutDayId),
+        exercisesRepo.findById(data.exerciseId),
+      ])
       if (!day) throw new NotFoundError('Workout day not found')
       if (day.userId !== userId) throw new ForbiddenError()
-
-      const exercise = await exercisesRepo.findById(data.exerciseId)
       if (!exercise) throw new NotFoundError('Exercise not found')
       if (exercise.userId !== userId) throw new ForbiddenError()
 

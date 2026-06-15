@@ -104,11 +104,16 @@ export function createExercisesService(deps: { exercisesRepo: ExercisesRepositor
 
     // 統計画面用：種目の進捗を 1 セッション（= トレーニング日）単位で集約して返す。
     async getProgress(userId: string, id: string): Promise<ExerciseProgressResponse> {
-      const existing = await exercisesRepo.findById(id)
+      // 存在/所有権チェック（findById）と集計対象セットの取得（findSetsByExercise）は
+      // ともにリクエストの id/userId のみに依存し互いに独立なので並列に取得する。
+      // findSetsByExercise は userId で絞るため、非所有時も空配列が返るだけで情報は漏れない
+      // （rows を使う前に existing で必ず NotFound/Forbidden を投げる）。
+      const [existing, rows] = await Promise.all([
+        exercisesRepo.findById(id),
+        exercisesRepo.findSetsByExercise(userId, id),
+      ])
       if (!existing) throw new NotFoundError('Exercise not found')
       if (existing.userId !== userId) throw new ForbiddenError()
-
-      const rows = await exercisesRepo.findSetsByExercise(userId, id)
 
       // 日付昇順で来る行を workoutDayId ごとに集約する。挿入順を保つため Map を使う。
       const byDay = new Map<
