@@ -25,8 +25,11 @@ export function createWorkoutDaysService(deps: { workoutDaysRepo: WorkoutDaysRep
 
   return {
     async getAll(userId: string): Promise<WorkoutDayResponse[]> {
-      const rows = await workoutDaysRepo.findAllByUser(userId)
-      const mgRows = await workoutDaysRepo.findPrimaryMuscleGroupsByUser(userId)
+      // 2クエリは userId のみに依存し互いに独立なので並列に取得する（直列2往復→1往復相当）。
+      const [rows, mgRows] = await Promise.all([
+        workoutDaysRepo.findAllByUser(userId),
+        workoutDaysRepo.findPrimaryMuscleGroupsByUser(userId),
+      ])
 
       // 日ごとにメイン部位名を集約（record 作成順を保ちつつ重複排除）。
       const byDay = new Map<string, string[]>()
