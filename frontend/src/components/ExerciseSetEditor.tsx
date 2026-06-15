@@ -106,7 +106,7 @@ function SortableSetRow({
   const rm = calcRM(toNum(setRow.reps), toNum(setRow.weight))
 
   return (
-    <div ref={setNodeRef} style={style} className="bg-surface-container rounded-xl px-3 py-2 space-y-1">
+    <div ref={setNodeRef} style={style} className="bg-surface-container rounded-xl px-3 py-1.5 space-y-1">
       <div className="flex items-end gap-1">
         {/* 左端のハンドル・番号は入力欄（py-1.5 + text-base ≒ h-9）と高さを揃え、
             items-end で下端を合わせたうえで中央寄せし、入力欄の縦中心と一致させる。 */}
@@ -137,7 +137,7 @@ function SortableSetRow({
               （右の空きがそのままボタンとの間隔になる）。 */}
           <div className="grid grid-cols-2 gap-3 w-[90%]">
           <div>
-            <label className="text-sm text-content-inverse/50">重量 (kg)</label>
+            <label className="text-xs leading-tight text-content-inverse/50">重量 (kg)</label>
             <input
               ref={(el) => {
                 weightRef.current = el
@@ -161,7 +161,7 @@ function SortableSetRow({
             />
           </div>
           <div>
-            <label className="text-sm text-content-inverse/50">レップ</label>
+            <label className="text-xs leading-tight text-content-inverse/50">レップ</label>
             <input
               ref={repsRef}
               type="number"
@@ -194,7 +194,7 @@ function SortableSetRow({
           ✕
         </button>
       </div>
-      <div className="flex items-center justify-end gap-4 text-sm text-content-inverse/50">
+      <div className="flex items-center justify-end gap-4 text-xs text-content-inverse/50">
         <span>ボリューム: {volume} kg</span>
         <span>1RM推定: {rm} kg</span>
         {status === 'saving' && <span className="text-content-inverse/40">保存中…</span>}
