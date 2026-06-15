@@ -107,22 +107,24 @@ function SortableSetRow({
 
   return (
     <div ref={setNodeRef} style={style} className="bg-surface-container rounded-xl p-3 space-y-2">
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-1">
         {/* 左端のハンドル・番号は入力欄（py-2 + text-base ≒ h-10）と高さを揃え、
             items-end で下端を合わせたうえで中央寄せし、入力欄の縦中心と一致させる。 */}
         {/* touch-none が無いとタッチがスクロールに奪われ、ドラッグ開始イベントが
             dnd-kit に届かない（ハンドルでのドラッグが効かない原因）。select-none で
-            長押し時の文字選択も抑止する。タップ標的を広げるため px を増やす。 */}
+            長押し時の文字選択も抑止する。タップ標的は h-10 で確保しつつ、左クラスタが
+            右の削除ボタンより広くなって入力欄が右に寄るのを防ぐため、左の余白は詰める
+            （-ml で px 分を相殺してカード左端に寄せる）。 */}
         <button
           type="button"
           aria-label="並び替え"
           {...attributes}
           {...listeners}
-          className="text-content-inverse/30 cursor-grab active:cursor-grabbing touch-none select-none px-2 h-10 flex items-center"
+          className="text-content-inverse/30 cursor-grab active:cursor-grabbing touch-none select-none px-1 h-10 flex items-center -ml-1"
         >
           ⠿
         </button>
-        <span className="text-content-inverse/60 text-sm w-5 h-10 flex items-center">{index + 1}</span>
+        <span className="text-content-inverse/60 text-sm w-3.5 h-10 flex items-center">{index + 1}</span>
         <div
           className="flex-1 grid grid-cols-2 gap-4"
           // 重量↔回数の移動（grid 内）では保存せず、入力欄2つの外へフォーカスが
