@@ -135,7 +135,7 @@ function SortableSetRow({
         >
           {/* 入力は最大3桁程度。横幅を余らせて削除ボタンとの間に余白を作る
               （右の空きがそのままボタンとの間隔になる）。 */}
-          <div className="grid grid-cols-2 gap-3 w-4/5">
+          <div className="grid grid-cols-2 gap-3 w-[90%]">
           <div>
             <label className="text-sm text-content-inverse/50">重量 (kg)</label>
             <input
