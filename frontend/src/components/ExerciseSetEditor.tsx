@@ -126,13 +126,16 @@ function SortableSetRow({
         </button>
         <span className="text-content-inverse/60 text-sm w-3.5 h-10 flex items-center">{index + 1}</span>
         <div
-          className="flex-1 grid grid-cols-2 gap-4"
+          className="flex-1 flex"
           // 重量↔回数の移動（grid 内）では保存せず、入力欄2つの外へフォーカスが
           // 抜けたときだけ永続化する。
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node | null)) onCommit(setRow.id)
           }}
         >
+          {/* 入力は最大3桁程度。横幅を余らせて削除ボタンとの間に余白を作る
+              （右の空きがそのままボタンとの間隔になる）。 */}
+          <div className="grid grid-cols-2 gap-3 w-4/5">
           <div>
             <label className="text-sm text-content-inverse/50">重量 (kg)</label>
             <input
@@ -176,6 +179,7 @@ function SortableSetRow({
               }}
               className="w-full bg-surface-secondary text-content-inverse rounded px-2 py-2 text-center text-base"
             />
+          </div>
           </div>
         </div>
         {/* 入力欄と高さ・角丸を揃えるため共有 Button は使わず、入力欄と同じ
