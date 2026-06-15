@@ -189,14 +189,24 @@ export function WorkoutDayPage() {
                   </span>
                   {exercise?.name ?? '種目不明'}
                 </button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => void handleDeleteRecord(record.id)}
-                  disabled={deleteRecord.isPending}
-                >
-                  削除
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    aria-label="この種目の統計を見る"
+                    onClick={() => navigate(`/statistics?exercise=${record.exerciseId}`)}
+                  >
+                    統計
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => void handleDeleteRecord(record.id)}
+                    disabled={deleteRecord.isPending}
+                  >
+                    削除
+                  </Button>
+                </div>
               </div>
               {/* grid-template-rows を 0fr↔1fr で遷移させ、高さを滑らかに開閉する。
                   中身は常にマウントしたまま overflow-hidden でクリップする。 */}

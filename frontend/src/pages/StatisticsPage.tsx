@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   CartesianGrid,
   Legend,
@@ -119,14 +120,22 @@ function ChartTooltip({
 export function StatisticsPage() {
   const { data: exercises, isLoading: exercisesLoading } = useExercises()
 
+  // 入力画面の種目カードから ?exercise=<id> で遷移してきた場合の初期選択。
+  const [searchParams] = useSearchParams()
+  const exerciseParam = searchParams.get('exercise')
+
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null)
 
-  // 種目が読み込まれたら先頭を初期選択する。
+  // 種目が読み込まれたら初期選択する。クエリで種目が指定され、かつ実在すれば
+  // それを優先し、無ければ先頭を選ぶ。
   useEffect(() => {
     if (selectedExercise == null && exercises && exercises.length > 0) {
-      setSelectedExercise(exercises[0].id)
+      const fromParam = exerciseParam && exercises.some((e) => e.id === exerciseParam)
+        ? exerciseParam
+        : null
+      setSelectedExercise(fromParam ?? exercises[0].id)
     }
-  }, [exercises, selectedExercise])
+  }, [exercises, selectedExercise, exerciseParam])
 
   const { data: progress, isLoading: progressLoading } = useExerciseProgress(selectedExercise)
 
