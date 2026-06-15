@@ -383,7 +383,7 @@ export function ExerciseSetEditor({
   const totalVolume = rows.reduce((sum, r) => sum + calcVolume(toNum(r.reps), toNum(r.weight)), 0)
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {rows.length > 0 && (
         <div className="text-sm text-content-secondary text-right">
           総ボリューム: {totalVolume} kg
