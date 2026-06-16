@@ -2,7 +2,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useExercise } from '@/queries/useExercises'
 import { useExerciseHistory } from '@/queries/useExerciseHistory'
 import { PageLayout } from '@/components/PageLayout'
-import { Button } from '@/components/Button'
 import { ExerciseProgressChart } from '@/components/ExerciseProgressChart'
 import { calcVolume } from '@/lib/exercise'
 import { formatDateJa, getDayOfWeekJa } from '@/lib/date'
@@ -21,16 +20,8 @@ export function ExerciseHistoryPage() {
   const hasRecords = sessions.length > 0
 
   return (
-    <PageLayout
-      title="履歴・統計"
-      hideNav
-      headerRight={
-        <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          戻る
-        </Button>
-      }
-    >
-      <div className="flex flex-col gap-3 p-4">
+    <PageLayout title="履歴・統計" hideNav>
+      <div className="flex flex-col gap-3 p-4 pb-24">
         {exercise && (
           <p className="text-sm text-content-secondary">
             {exercise.name}
@@ -91,6 +82,19 @@ export function ExerciseHistoryPage() {
           </>
         )}
       </div>
+
+      {/* 「少し見て戻る」操作が多い画面なので、戻る導線は親指が届く最下部中央に
+          フロート表示する。見つけやすさ重視で塗り＋影の目立つピル型にする。
+          safe-area 分を底上げしてホームバー等と重ならないようにする。 */}
+      <button
+        type="button"
+        aria-label="戻る"
+        onClick={() => navigate(-1)}
+        className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-interactive-primary px-8 py-3.5 text-base font-bold text-content-inverse shadow-lg transition-all hover:bg-interactive-hover active:scale-95"
+      >
+        <span aria-hidden>←</span>
+        戻る
+      </button>
     </PageLayout>
   )
 }
