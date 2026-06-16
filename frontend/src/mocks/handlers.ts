@@ -84,6 +84,33 @@ export const handlers = [
 
     return HttpResponse.json({ exerciseId, points })
   }),
+  // 履歴：種目の直近5セッションをセット内訳つきで新しい順に返す（閲覧専用）
+  http.get(`${BASE}/exercises/:id/history`, ({ params }) => {
+    const exerciseId = params.id as string
+    const dateByDay = new Map(db.workoutDays.map((d) => [d.id, d.date]))
+    const recordsForExercise = db.workoutRecords.filter((r) => r.exerciseId === exerciseId)
+
+    const byDay = new Map<
+      string,
+      { workoutDayId: string; date: string; sets: { id: string; reps: number; weight: number }[] }
+    >()
+    for (const rec of recordsForExercise) {
+      const date = dateByDay.get(rec.workoutDayId)
+      if (!date) continue
+      const session = byDay.get(rec.workoutDayId) ?? { workoutDayId: rec.workoutDayId, date, sets: [] }
+      const sets = db.workoutSets
+        .filter((s) => s.workoutRecordId === rec.id)
+        .sort((a, b) => a.position - b.position)
+      for (const s of sets) session.sets.push({ id: s.id, reps: s.reps, weight: s.weight })
+      byDay.set(rec.workoutDayId, session)
+    }
+
+    const sessions = Array.from(byDay.values())
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 5)
+
+    return HttpResponse.json({ exerciseId, sessions })
+  }),
   http.post(`${BASE}/exercises`, async ({ request }) => {
     const body = (await request.json()) as ExerciseUpsertRequest
     const existing = db.exercises.find((e) => e.id === body.id)

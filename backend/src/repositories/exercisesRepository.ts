@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq } from 'drizzle-orm'
 import type { BatchItem } from 'drizzle-orm/batch'
 import type { DB } from '../db/client.js'
 import {
@@ -122,6 +122,26 @@ export function createExercisesRepository(db: DB) {
         .innerJoin(workoutDays, eq(workoutDays.id, workoutRecords.workoutDayId))
         .where(and(eq(workoutRecords.exerciseId, exerciseId), eq(workoutDays.userId, userId)))
         .orderBy(asc(workoutDays.date))
+    },
+
+    // 履歴用：指定種目の全セットを、属するトレーニング日（日付の降順 = 新しい順）と
+    // セットの表示順（position 昇順）で返す。日ごとのグルーピングと直近 N 件への
+    // 絞り込みはサービス側で行う。ownership は workout_days.user_id で担保する。
+    // weight は TEXT 格納なので呼び出し側で Number 化する。
+    async findHistoryByExercise(userId: string, exerciseId: string) {
+      return db
+        .select({
+          workoutDayId: workoutDays.id,
+          date: workoutDays.date,
+          setId: workoutSets.id,
+          reps: workoutSets.reps,
+          weight: workoutSets.weight,
+        })
+        .from(workoutSets)
+        .innerJoin(workoutRecords, eq(workoutRecords.id, workoutSets.workoutRecordId))
+        .innerJoin(workoutDays, eq(workoutDays.id, workoutRecords.workoutDayId))
+        .where(and(eq(workoutRecords.exerciseId, exerciseId), eq(workoutDays.userId, userId)))
+        .orderBy(desc(workoutDays.date), asc(workoutSets.position))
     },
 
     // Returns muscle groups as sorted array (primary first)

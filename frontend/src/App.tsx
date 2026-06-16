@@ -7,6 +7,7 @@ import { HomePage } from '@/pages/HomePage'
 import { CalendarPage } from '@/pages/CalendarPage'
 import { ExercisesPage } from '@/pages/ExercisesPage'
 import { WorkoutDayPage } from '@/pages/WorkoutDayPage'
+import { ExerciseHistoryPage } from '@/pages/ExerciseHistoryPage'
 
 // 統計画面は recharts（重い）に依存するため遅延読み込みし、メインバンドルから切り離す。
 const StatisticsPage = lazy(() =>
@@ -41,6 +42,7 @@ export default function App() {
             }
           />
           <Route path="/workout/:workoutId" element={<WorkoutDayPage />} />
+          <Route path="/exercises/:exerciseId/history" element={<ExerciseHistoryPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

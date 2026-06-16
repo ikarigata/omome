@@ -203,6 +203,7 @@ workout_records (1) ──< (N) workout_sets
 | PUT | `/{id}` | 種目更新（部位の紐付け更新含む） |
 | DELETE | `/{id}` | 種目削除（CASCADE） |
 | GET | `/{id}/progress` | 進捗統計（セッション単位の集約。§6.3） |
+| GET | `/{id}/history` | トレーニング履歴（直近5セッションをセット内訳つきで新しい順。閲覧専用。§6.3） |
 
 **muscle-groups** `/api/v1/muscle-groups`
 | GET | `/` | 部位マスタ一覧 |
@@ -325,6 +326,27 @@ workout_records (1) ──< (N) workout_sets
   - `maxWeight` = その日の最大 `weight`。
   - `estimatedOneRepMax` = Epley 式 `round(weight * (1 + reps / 30))` の日内最大。`reps`/`weight` が 0 のセットは 0 扱い。
 - **実装**: `workout_sets → workout_records → workout_days` を JOIN し、`workout_records.exercise_id` と `workout_days.user_id` で絞り、サービス層で日単位に集約する（`exercisesService.getProgress` / `exercisesRepository.findSetsByExercise`）。`weight` は TEXT 格納のためサービスで `Number()` 化する。フロント設計書 §9 と整合。
+
+#### 6.3.1 トレーニング履歴（exercises/{id}/history）→ 確定（実装済み）
+進捗統計と同じく**集約レスポンス**方式の派生で、入力画面の種目カードの「履歴」ボタンから遷移する**閲覧専用**画面に供給する。
+
+- **リクエスト**: `GET /api/v1/exercises/{exerciseId}/history`
+  - 所有権チェックは progress と同一（他人なら 403、存在しなければ 404）。
+- **集約単位**: 進捗と同じく 1セッション = 1トレーニング日。**直近 5 セッション**（新しい順）に制限する（上限は `HISTORY_SESSION_LIMIT = 5`）。
+- **レスポンス**: 各セッションは当日のセット内訳（表示順 = `position` 昇順）をそのまま持つ。統計のような派生集約はしない（フロントで必要なら算出）。
+  ```json
+  {
+    "exerciseId": "uuid",
+    "sessions": [
+      {
+        "workoutDayId": "uuid",
+        "date": "2026-06-03",
+        "sets": [{ "id": "uuid", "reps": 10, "weight": 60 }]
+      }
+    ]
+  }
+  ```
+- **実装**: progress と同じ JOIN を `workout_days.date` 降順・`workout_sets.position` 昇順で取得し、サービス層で日単位にグルーピングして先頭5件に絞る（`exercisesService.getHistory` / `exercisesRepository.findHistoryByExercise`）。`weight` は TEXT 格納のため `Number()` 化する。閲覧専用なので編集系 API は持たない。フロント設計書 §9 と整合。
 
 ### 6.4 カレンダー（workout-days/calendar）→ 確定
 旧 lift_log のロジック（月の日一覧＋全実績を別取得してフロントで突き合わせ）は参照せず、**1エンドポイントに集約**して新規実装する。

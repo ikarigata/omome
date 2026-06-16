@@ -1,10 +1,14 @@
 import type { ExercisesRepository } from '../repositories/exercisesRepository.js'
 import { ForbiddenError, NotFoundError } from '../middleware/error.js'
 import type {
+  ExerciseHistoryResponse,
   ExerciseProgressResponse,
   ExerciseResponse,
   ExerciseUpsertRequest,
 } from '@omome/shared'
+
+// 履歴画面で返すセッション数の上限（直近 N 件）。
+const HISTORY_SESSION_LIMIT = 5
 
 // Epley 式の推定 1RM。reps が 0 のセットは換算不能なので 0 扱い。
 function estimateOneRepMax(weight: number, reps: number): number {
@@ -144,6 +148,37 @@ export function createExercisesService(deps: { exercisesRepo: ExercisesRepositor
           maxWeight: p.maxWeight,
           estimatedOneRepMax: p.oneRM,
         })),
+      }
+    },
+
+    // 履歴画面用：種目の直近セッション（トレーニング日単位）を新しい順に返す。
+    // 各セッションは表示順のセット（reps / weight）を持つ。閲覧専用。
+    async getHistory(userId: string, id: string): Promise<ExerciseHistoryResponse> {
+      // 進捗と同様、存在/所有権チェックとセット取得は独立なので並列化する。
+      const [existing, rows] = await Promise.all([
+        exercisesRepo.findById(id),
+        exercisesRepo.findHistoryByExercise(userId, id),
+      ])
+      if (!existing) throw new NotFoundError('Exercise not found')
+      if (existing.userId !== userId) throw new ForbiddenError()
+
+      // 行は日付降順で来る。workoutDayId ごとに集約し、出現順（= 新しい順）を保つ。
+      const byDay = new Map<
+        string,
+        { workoutDayId: string; date: string; sets: { id: string; reps: number; weight: number }[] }
+      >()
+      for (const row of rows) {
+        let session = byDay.get(row.workoutDayId)
+        if (!session) {
+          session = { workoutDayId: row.workoutDayId, date: row.date, sets: [] }
+          byDay.set(row.workoutDayId, session)
+        }
+        session.sets.push({ id: row.setId, reps: row.reps, weight: Number(row.weight) })
+      }
+
+      return {
+        exerciseId: id,
+        sessions: Array.from(byDay.values()).slice(0, HISTORY_SESSION_LIMIT),
       }
     },
   }
