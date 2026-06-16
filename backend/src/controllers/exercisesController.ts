@@ -22,6 +22,11 @@ export function createExercisesController(deps: { exercisesService: ExercisesSer
     return c.json(await exercisesService.getProgress(userId, c.req.param('id')))
   })
 
+  controller.get('/:id/history', async (c) => {
+    const userId = c.get('userId')
+    return c.json(await exercisesService.getHistory(userId, c.req.param('id')))
+  })
+
   controller.post('/', async (c) => {
     const userId = c.get('userId')
     const raw = await c.req.json().catch(() => null)

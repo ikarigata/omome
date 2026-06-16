@@ -199,4 +199,80 @@ describe('exercisesService', () => {
       expect(res.points).toEqual([])
     })
   })
+
+  describe('getHistory — 履歴', () => {
+    it('存在しないと 404', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(undefined as never)
+      await expect(service.getHistory(USER, 'ex-1')).rejects.toMatchObject({ status: 404 })
+    })
+
+    it('他人の所有なら 403', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExerciseRow({ userId: OTHER }) as never)
+      await expect(service.getHistory(USER, 'ex-1')).rejects.toMatchObject({ status: 403 })
+    })
+
+    it('日ごとにセットを集約し、出現順（新しい順）を保ち weight を数値化する', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExerciseRow() as never)
+      // リポジトリは日付降順・position 昇順で返す想定。day-2（新）→ day-1（旧）。
+      vi.mocked(exercisesRepo.findHistoryByExercise).mockResolvedValue([
+        { workoutDayId: 'day-2', date: '2026-01-05', setId: 's-3', reps: 8, weight: '55' },
+        { workoutDayId: 'day-1', date: '2026-01-01', setId: 's-1', reps: 10, weight: '50' },
+        { workoutDayId: 'day-1', date: '2026-01-01', setId: 's-2', reps: 5, weight: '60' },
+      ] as never)
+
+      const res = await service.getHistory(USER, 'ex-1')
+
+      expect(res.exerciseId).toBe('ex-1')
+      expect(res.sessions).toEqual([
+        {
+          workoutDayId: 'day-2',
+          date: '2026-01-05',
+          sets: [{ id: 's-3', reps: 8, weight: 55 }],
+        },
+        {
+          workoutDayId: 'day-1',
+          date: '2026-01-01',
+          sets: [
+            { id: 's-1', reps: 10, weight: 50 },
+            { id: 's-2', reps: 5, weight: 60 },
+          ],
+        },
+      ])
+    })
+
+    it('直近5セッションに制限する', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExerciseRow() as never)
+      // 7 日分（各1セット）を新しい順で渡す。
+      const rows = Array.from({ length: 7 }, (_, i) => ({
+        workoutDayId: `day-${i}`,
+        date: `2026-01-${String(10 - i).padStart(2, '0')}`,
+        setId: `s-${i}`,
+        reps: 10,
+        weight: '50',
+      }))
+      vi.mocked(exercisesRepo.findHistoryByExercise).mockResolvedValue(rows as never)
+
+      const res = await service.getHistory(USER, 'ex-1')
+      expect(res.sessions).toHaveLength(5)
+      expect(res.sessions.map((s) => s.workoutDayId)).toEqual([
+        'day-0',
+        'day-1',
+        'day-2',
+        'day-3',
+        'day-4',
+      ])
+    })
+
+    it('記録が無ければ sessions は空配列', async () => {
+      const { exercisesRepo, service } = setup()
+      vi.mocked(exercisesRepo.findById).mockResolvedValue(fakeExerciseRow() as never)
+      vi.mocked(exercisesRepo.findHistoryByExercise).mockResolvedValue([] as never)
+      const res = await service.getHistory(USER, 'ex-1')
+      expect(res.sessions).toEqual([])
+    })
+  })
 })

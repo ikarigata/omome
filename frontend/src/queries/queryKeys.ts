@@ -3,6 +3,7 @@ export const queryKeys = {
     all: () => ['exercises'] as const,
     detail: (id: string) => ['exercises', id] as const,
     progress: (id: string) => ['exercises', id, 'progress'] as const,
+    history: (id: string) => ['exercises', id, 'history'] as const,
   },
   muscleGroups: {
     all: () => ['muscleGroups'] as const,

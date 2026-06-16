@@ -18,6 +18,7 @@ export {
 export { UserResponseSchema, UserUpdateRequestSchema } from './schemas/user.js'
 export { CalendarResponseSchema } from './schemas/calendar.js'
 export { ExerciseProgressResponseSchema } from './schemas/exerciseProgress.js'
+export { ExerciseHistoryResponseSchema } from './schemas/exerciseHistory.js'
 
 export type {
   ExerciseResponse,
@@ -36,4 +37,5 @@ export type {
   UserUpdateRequest,
   CalendarResponse,
   ExerciseProgressResponse,
+  ExerciseHistoryResponse,
 } from './types.js'

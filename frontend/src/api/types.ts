@@ -15,4 +15,5 @@ export type {
   UserUpdateRequest,
   CalendarResponse,
   ExerciseProgressResponse,
+  ExerciseHistoryResponse,
 } from '@omome/shared'
