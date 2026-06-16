@@ -55,6 +55,28 @@ describe('useUpsertWorkoutRecord（楽観的更新）', () => {
     expect(recs?.[0]?.id).toBe(id)
   })
 
+  it('成功後は種目の集約（progress / history）を無効化する（履歴・統計の不整合防止）', async () => {
+    const qc = makeClient()
+    qc.setQueryData<WorkoutRecordResponse[]>(queryKeys.workoutDays.records(dayId), [])
+
+    const exerciseId = generateId()
+    // 既存の集約キャッシュを「鮮度あり」で用意し、書き込みで stale 化することを確認する。
+    qc.setQueryData(queryKeys.exercises.progress(exerciseId), { exerciseId, points: [] })
+    qc.setQueryData(queryKeys.exercises.history(exerciseId), { exerciseId, sessions: [] })
+
+    const { result } = renderHookWithClient(() => useUpsertWorkoutRecord(), qc)
+
+    act(() => {
+      result.current.mutate({ id: generateId(), workoutDayId: dayId, exerciseId })
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => {
+      expect(qc.getQueryState(queryKeys.exercises.progress(exerciseId))?.isInvalidated).toBe(true)
+      expect(qc.getQueryState(queryKeys.exercises.history(exerciseId))?.isInvalidated).toBe(true)
+    })
+  })
+
   it('失敗したら楽観挿入を巻き戻し、シードした sets も消す', async () => {
     // この作成だけ 500 を返させる。
     server.use(

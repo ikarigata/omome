@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workoutDaysApi } from '@/api/resources/workoutDays'
 import type { WorkoutDayCreateRequest, WorkoutDayUpdateRequest } from '@/api/types'
 import { queryKeys } from './queryKeys'
+import { invalidateExerciseAggregates } from './invalidateExerciseAggregates'
 
 export function useWorkoutDays() {
   return useQuery({
@@ -46,6 +47,8 @@ export function useDeleteWorkoutDay() {
     mutationFn: (id: string) => workoutDaysApi.remove(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.workoutDays.all() })
+      // 日の削除はカスケードで記録・セットも消えるため、種目の集約も無効化する。
+      invalidateExerciseAggregates(qc)
     },
   })
 }
