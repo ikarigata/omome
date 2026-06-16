@@ -193,18 +193,10 @@ export function WorkoutDayPage() {
                   <Button
                     variant="secondary"
                     size="sm"
-                    aria-label="この種目の履歴を見る"
+                    aria-label="この種目の履歴・統計を見る"
                     onClick={() => navigate(`/exercises/${record.exerciseId}/history`)}
                   >
                     履歴
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    aria-label="この種目の統計を見る"
-                    onClick={() => navigate(`/statistics?exercise=${record.exerciseId}`)}
-                  >
-                    統計
                   </Button>
                   <Button
                     variant="danger"
