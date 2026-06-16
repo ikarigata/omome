@@ -131,7 +131,8 @@ export function RestTimer() {
   }, [running])
 
   function selectPreset(sec: number) {
-    setRunning(false)
+    // 動作中の誤タップでリセットされないよう、実行中はプリセット変更を無視する。
+    if (running) return
     setFinished(false)
     setDuration(sec)
     setRemaining(sec)
@@ -166,7 +167,8 @@ export function RestTimer() {
             key={sec}
             type="button"
             onClick={() => selectPreset(sec)}
-            className={`rounded-md px-1 py-1.5 text-sm transition-colors ${
+            disabled={running}
+            className={`rounded-md px-1 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
               duration === sec ? 'bg-white/25 font-bold' : 'bg-white/10 hover:bg-white/20'
             }`}
           >
