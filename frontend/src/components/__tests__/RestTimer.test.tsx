@@ -50,6 +50,19 @@ describe('RestTimer', () => {
     expect(screen.getByText('01:00')).toBeInTheDocument()
   })
 
+  it('動作中はプリセットが無効化され、押しても残り時間が変わらない', () => {
+    renderWithProviders(<RestTimer />)
+    fireEvent.click(screen.getByRole('button', { name: '開始' }))
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+    expect(screen.getByText('00:57')).toBeInTheDocument()
+    const preset = screen.getByRole('button', { name: '180秒' })
+    expect(preset).toBeDisabled()
+    fireEvent.click(preset) // 無効なので何も起きない
+    expect(screen.getByText('00:57')).toBeInTheDocument()
+  })
+
   it('リセットで基準時間に戻る', () => {
     renderWithProviders(<RestTimer />)
     fireEvent.click(screen.getByRole('button', { name: '開始' }))
