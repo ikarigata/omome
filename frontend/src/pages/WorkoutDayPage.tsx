@@ -15,6 +15,7 @@ import { Button } from '@/components/Button'
 import { Input } from '@/components/Input'
 import { ExerciseSetEditor } from '@/components/ExerciseSetEditor'
 import { ExerciseSelect } from '@/components/ExerciseSelect'
+import { RestTimer } from '@/components/RestTimer'
 import { generateId } from '@/lib/uuid'
 import { formatDateJa, getDayOfWeekJa } from '@/lib/date'
 
@@ -250,6 +251,9 @@ export function WorkoutDayPage() {
                 </button>
               )}
             </div>
+
+            {/* セット間レスト用のカウントダウンタイマー（種目追加ボタンの下に常設）。 */}
+            <RestTimer />
           </>
         )}
       </div>
