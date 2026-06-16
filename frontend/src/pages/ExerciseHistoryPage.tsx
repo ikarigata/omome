@@ -90,7 +90,7 @@ export function ExerciseHistoryPage() {
         type="button"
         aria-label="戻る"
         onClick={() => navigate(-1)}
-        className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-interactive-primary px-8 py-3.5 text-base font-bold text-content-inverse shadow-lg transition-all hover:bg-interactive-hover active:scale-95"
+        className="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-xl bg-interactive-primary px-8 py-3.5 text-base font-bold text-content-inverse shadow-lg transition-all hover:bg-interactive-hover active:scale-95"
       >
         <span aria-hidden>←</span>
         戻る
