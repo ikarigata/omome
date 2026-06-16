@@ -18,8 +18,8 @@ describe('RestTimer', () => {
 
   it('プリセットで残り時間を切り替える', () => {
     renderWithProviders(<RestTimer />)
-    fireEvent.click(screen.getByRole('button', { name: '90秒' }))
-    expect(screen.getByText('01:30')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '180秒' }))
+    expect(screen.getByText('03:00')).toBeInTheDocument()
   })
 
   it('開始すると残り時間が減り、押下で一時停止に切り替わる', () => {

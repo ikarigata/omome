@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 // 状態は localStorage に永続化し、別画面への遷移（アンマウント）やリロードを
 // またいでも継続する。実行中は「終了時刻(ms)」を保存しておき、復帰時に現在時刻
 // との差から残り時間を再計算する。
-const PRESETS = [60, 90, 120] as const
+const PRESETS = [60, 120, 180, 240, 300] as const
 const DEFAULT_DURATION = 60
 const STORAGE_KEY = 'omome.restTimer'
 // 永続化は「レスト中に別画面を見て戻る」程度の短時間の橋渡しが目的。これより古い
@@ -159,13 +159,14 @@ export function RestTimer() {
 
   return (
     <div className="rounded-xl bg-black p-4 text-white">
-      <div className="mb-3 flex items-center justify-center gap-2">
+      {/* 5択を均等幅で並べる（狭い画面でもはみ出さないよう grid で分割）。 */}
+      <div className="mb-3 grid grid-cols-5 gap-1.5">
         {PRESETS.map((sec) => (
           <button
             key={sec}
             type="button"
             onClick={() => selectPreset(sec)}
-            className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+            className={`rounded-md px-1 py-1.5 text-sm transition-colors ${
               duration === sec ? 'bg-white/25 font-bold' : 'bg-white/10 hover:bg-white/20'
             }`}
           >
