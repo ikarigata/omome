@@ -388,7 +388,7 @@ Tailwind 側は旧と同様、用途別トークンを `rgb(var(--token) / <alph
 
 > **統計画面 → 実装済み**: `/statistics`（ボトムナビ項目あり）。種目を選び、`useExerciseProgress(exerciseId)` でバックエンドの集約（`GET /exercises/:id/progress`、バックエンド §6.3）を取得し、総ボリューム / Max重量 / 推定1RM の推移を recharts のラインチャートで表示する。グラフ依存が重いためページは `React.lazy` で遅延読み込みする。入力画面（`/workout/:workoutId`）の種目カードの「統計」ボタンから `/statistics?exercise=<id>` で当該種目を選択済みの状態で遷移できる。
 
-> **履歴画面 → 実装済み**: `/exercises/:exerciseId/history`（**ボトムナビには出さない**ドリルダウン）。入力画面の種目カードの「履歴」ボタン（「統計」の左）から遷移し、`useExerciseHistory(exerciseId)` でバックエンドの履歴（`GET /exercises/:id/history`、バックエンド §6.3.1）を取得して、直近5セッションのセット内訳（重量×回数）を**閲覧専用**で新しい順に一覧表示する。編集導線は持たない。
+> **履歴・統計画面 → 実装済み**: `/exercises/:exerciseId/history`（タイトル「履歴・統計」。**ボトムナビには出さない**ドリルダウン）。入力画面の種目カードの「履歴」ボタン（「統計」の左）から遷移する、特定種目の**履歴と統計を1画面に統合**したビュー。**上半分**は `useExerciseHistory(exerciseId)`（`GET /exercises/:id/history`、バックエンド §6.3.1）で取得した直近5セッションのセット内訳（重量×回数）を**閲覧専用**で新しい順に一覧表示し、件数が多い場合はこの領域だけ縦スクロールする（`max-h-[46dvh] overflow-y-auto`、下のグラフは常に見える）。**下半分**は同じ種目の統計グラフ（`ExerciseProgressChart`）。チャート部品は統計画面（`/statistics`）と共通化し、recharts は両ページの遅延チャンクから共有チャンクに分離する（本体バンドルに含めない）。`/statistics` は種目ドロップダウン付きの一覧用ページとして併存させる。
 
 > **テーマ切替 → 確定（当面実装しない / 色システムは土台を残す）**: 切替UI・ThemeContext・永続化は初期スコープ外。ただし用途別トークン + CSS変数によるカラーシステムは最初から用意し、テーマ追加が `[data-theme]` ブロックの追加だけで済む状態を維持する（§5.5）。
 
