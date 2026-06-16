@@ -6,6 +6,7 @@ import type {
   WorkoutSetResponse,
 } from '@/api/types'
 import { queryKeys } from './queryKeys'
+import { invalidateExerciseAggregates } from './invalidateExerciseAggregates'
 
 export function useWorkoutRecordsByDay(workoutDayId: string) {
   return useQuery({
@@ -78,6 +79,7 @@ export function useUpsertWorkoutRecord() {
             : [...cleaned, res]
         },
       )
+      invalidateExerciseAggregates(qc)
     },
   })
 }
@@ -89,6 +91,7 @@ export function useDeleteWorkoutRecord() {
       workoutRecordsApi.remove(id).then(() => ({ workoutDayId })),
     onSuccess: ({ workoutDayId }) => {
       void qc.invalidateQueries({ queryKey: queryKeys.workoutDays.records(workoutDayId) })
+      invalidateExerciseAggregates(qc)
     },
   })
 }

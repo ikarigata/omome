@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { workoutSetsApi } from '@/api/resources/workoutSets'
 import type { WorkoutSetCreateRequest, WorkoutSetResponse, WorkoutSetUpdateRequest } from '@/api/types'
 import { queryKeys } from './queryKeys'
+import { invalidateExerciseAggregates } from './invalidateExerciseAggregates'
 
 // useWorkoutSets と、ページ側でまとめて先読みする useQueries の双方で同じ設定を使う。
 // staleTime を持たせることで、先読み済みのキャッシュをエディタがマウントしても
@@ -42,6 +43,7 @@ export function useCreateWorkoutSet() {
             : [...old, res]
         },
       )
+      invalidateExerciseAggregates(qc)
     },
   })
 }
@@ -63,6 +65,7 @@ export function useUpdateWorkoutSet() {
         queryKeys.workoutRecords.sets(res.workoutRecordId),
         (old) => old?.map((s) => (s.id === res.id ? res : s)),
       )
+      invalidateExerciseAggregates(qc)
     },
   })
 }
@@ -76,6 +79,7 @@ export function useReorderWorkoutSets() {
       workoutSetsApi.reorder(workoutRecordId, ids),
     onSuccess: (res, { workoutRecordId }) => {
       qc.setQueryData<WorkoutSetResponse[]>(queryKeys.workoutRecords.sets(workoutRecordId), res)
+      invalidateExerciseAggregates(qc)
     },
   })
 }
@@ -90,6 +94,7 @@ export function useDeleteWorkoutSet() {
         queryKeys.workoutRecords.sets(workoutRecordId),
         (old) => old?.filter((s) => s.id !== id),
       )
+      invalidateExerciseAggregates(qc)
     },
   })
 }
