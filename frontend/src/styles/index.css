@@ -6,7 +6,7 @@
   /* 1. 基本パレット */
   --color-main: 241 239 223;     /* #F1EFDF */
   --color-sub: 38 39 42;         /* #26272A */
-  --color-accent: 232 96 41;     /* #E86029 */
+  --color-accent: 213 104 60;    /* #D5683C くすませた暖色オレンジ */
   --color-container: 59 60 63;   /* #3B3C3F */
   --color-pure: 255 255 255;     /* #FFFFFF */
 
@@ -22,7 +22,7 @@
   --color-content-inverse:   var(--color-main);
 
   --color-interactive-primary: var(--color-accent);
-  --color-interactive-hover:   200 74 22;
+  --color-interactive-hover:   182 81 40;  /* #B65128 アクセントのhover（くすませた濃いオレンジ） */
 
   --color-navigation-bg:   var(--color-pure);
   --color-navigation-text: var(--color-sub);
