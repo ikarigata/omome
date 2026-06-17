@@ -6,16 +6,16 @@ export default {
       fontFamily: {
         gothic: ['"DotGothic16"', 'sans-serif'],
       },
-      // 角丸をほぼ無しに近づける（各 rounded-* を最小限の値に再マップ）。
+      // 角丸を控えめ(#67)とほぼ無し(#69)の中間に再マップ。
       // full（円・ピル）はそのまま残す。お試し調整なのでここ1か所で増減できる。
       borderRadius: {
-        DEFAULT: '0.0625rem', // rounded     → 1px
-        sm: '0px', //            rounded-sm  → 0px
-        md: '0.0625rem', //      rounded-md  → 1px
-        lg: '0.0625rem', //      rounded-lg  → 1px
-        xl: '0.125rem', //       rounded-xl  → 2px
-        '2xl': '0.125rem', //    rounded-2xl → 2px
-        '3xl': '0.1875rem', //   rounded-3xl → 3px
+        DEFAULT: '0.09375rem', // rounded     → 1.5px
+        sm: '0.03125rem', //      rounded-sm  → 0.5px
+        md: '0.125rem', //        rounded-md  → 2px
+        lg: '0.15625rem', //      rounded-lg  → 2.5px
+        xl: '0.25rem', //         rounded-xl  → 4px
+        '2xl': '0.3125rem', //    rounded-2xl → 5px
+        '3xl': '0.46875rem', //   rounded-3xl → 7.5px
       },
       colors: {
         'surface-primary': 'rgb(var(--color-surface-primary) / <alpha-value>)',
