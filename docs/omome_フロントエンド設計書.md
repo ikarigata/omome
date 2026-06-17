@@ -223,7 +223,7 @@ Tailwind 側は旧と同様、用途別トークンを `rgb(var(--token) / <alph
   /* 1. 基本パレット（omome デフォルト = 旧オリジナル踏襲） */
   --color-main: 241 239 223;   /* #F1EFDF */
   --color-sub: 38 39 42;       /* #26272A */
-  --color-accent: 232 96 41;   /* #E86029 */
+  --color-accent: 213 104 60;  /* #D5683C くすませた暖色オレンジ */
   --color-container: 59 60 63; /* #3B3C3F */
   --color-pure: 255 255 255;   /* #FFFFFF */
 
